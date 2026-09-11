@@ -43,12 +43,12 @@ jobs:
       - run: deno ci
       - run: deno task test --coverage=.cov
       - if: runner.os == 'Linux'
-        run: deno coverage --lcov .cov > .cov.lcov
+        run: deno coverage --lcov .cov > coverage.lcov
       - if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: .cov.lcov
+          path: coverage.lcov
 
   test-node:
     runs-on: ubuntu-latest

@@ -647,7 +647,7 @@ Versioning: all packages share one version (`scripts/check_versions.ts` fails
 `0.1.0` = core + all four adapters + all five probes, tagged when `check`,
 `test-deno`, `test-node` and `treeshake` are green. Phases are sequential;
 tasks inside a phase are ordered by dependency. Phases 0–3 are complete and
-Phase 4 is complete up to the manual repo/tag steps (4.9, 4.10).
+Phase 4 is complete up to the manual tag step (4.10).
 
 ### Phase 0 — repository scaffold ✅
 
@@ -767,7 +767,7 @@ Shared
 Phase gate
 - [x] 3.21 Update `examples/*` to wire all five probes; `deno task check` (incl. `deno check examples/`), `test`, `build`, `test:node` green; `deno publish --dry-run` for all probes.
 
-### Phase 4 — release hardening (4.9 / 4.10 pending maintainer)
+### Phase 4 — release hardening (4.10 pending maintainer)
 
 - [x] 4.1 `scripts/check_treeshake.ts`: for each package build a temp consumer importing one symbol from `dist/mod.js`, run esbuild `--bundle --metafile --platform=neutral --external:@openstatus/*` (externals only for cross-package deps), parse metafile, fail if any module path contains a framework/client name not in that package's allowlist.
   - Note: externals are the *other* workspace members only (externalising `@openstatus/*` wholesale skipped the package under test), and the script also fails if `dist/` was not bundled at all.
@@ -778,7 +778,7 @@ Phase gate
 - [x] 4.6 `deno publish --dry-run` and `npm pack --dry-run` for every package; inspect `dist/` contents (`.js`, `.cjs`, `.d.ts`, `.d.cts`, sourcemaps only).
 - [x] 4.7 Smoke-test the npm tarballs from a scratch Node project (`npm i ./packages/*/openstatus-*.tgz`) with both `import` and `require`. Verified 2026-09-11 with Node 24: all four adapters and five probes load and serve from ESM and CJS.
 - [x] 4.8 `CHANGES.md` with a `0.1.0` entry.
-- [ ] 4.9 Create GitHub repo `openstatusHQ/health`, push, confirm CI green on `main`.
+- [x] 4.9 Create GitHub repo `openstatusHQ/health`, push, confirm CI green on `main`. (Run 34635453392: check, test-deno ×3, test-node, treeshake, publish-dry-run all green.)
 - [ ] 4.10 Tag `0.1.0` locally; publishing to JSR/npm is done manually by the maintainer per `RELEASING.md`.
 
 ### Later / nice to have
