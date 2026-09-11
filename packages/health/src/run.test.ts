@@ -1,0 +1,153 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
+import { aggregate, runProbes } from "./run.ts";
+import type { CheckResult, Probe } from "./types.ts";
+
+const ok = (name: string, critical = false): Probe => ({
+  name,
+  critical,
+  run: () => {},
+});
+
+const failing = (name: string, critical = false): Probe => ({
+  name,
+  critical,
+  run: () => {
+    throw new Error("boom");
+  },
+});
+
+const hanging = (name: string, critical = false): Probe => ({
+  name,
+  critical,
+  timeoutMs: 20,
+  run: (signal) =>
+    new Promise<void>((_, reject) => {
+      signal.addEventListener("abort", () => reject(signal.reason));
+    }),
+});
+
+const check = (
+  name: string,
+  status: CheckResult["status"],
+  critical = false,
+): CheckResult => ({ name, status, critical, latencyMs: 0 });
+
+test("aggregate() is ok when every check is ok or skipped", () => {
+  assert.equal(aggregate([]), "ok");
+  assert.equal(aggregate([check("a", "ok"), check("b", "skipped")]), "ok");
+});
+
+test("aggregate() is degraded on a non-critical failure", () => {
+  assert.equal(aggregate([check("a", "ok"), check("b", "failed")]), "degraded");
+  assert.equal(aggregate([check("b", "timeout")]), "degraded");
+});
+
+test("aggregate() is unhealthy on a critical failure", () => {
+  assert.equal(
+    aggregate([check("a", "failed"), check("b", "failed", true)]),
+    "unhealthy",
+  );
+  assert.equal(aggregate([check("b", "timeout", true)]), "unhealthy");
+});
+
+test("runProbes() reports ok checks with latency", async () => {
+  const report = await runProbes([ok("a"), ok("b", true)]);
+  assert.equal(report.status, "ok");
+  assert.equal(report.checks.length, 2);
+  assert.deepEqual(
+    report.checks.map((c) => [c.name, c.status, c.critical]),
+    [["a", "ok", false], ["b", "ok", true]],
+  );
+  assert.ok(report.checks.every((c) => c.latencyMs >= 0));
+  assert.ok(report.latencyMs >= 0);
+  assert.ok(!Number.isNaN(Date.parse(report.checkedAt)));
+});
+
+test("runProbes() marks skipped probes without running them", async () => {
+  let ran = false;
+  const report = await runProbes([{
+    name: "a",
+    skip: () => true,
+    run: () => {
+      ran = true;
+    },
+  }]);
+  assert.equal(ran, false);
+  assert.equal(report.status, "ok");
+  assert.deepEqual(report.checks[0], {
+    name: "a",
+    status: "skipped",
+    critical: false,
+    latencyMs: 0,
+  });
+});
+
+test("runProbes() treats a throwing skip() as a failure", async () => {
+  const report = await runProbes([{
+    name: "a",
+    skip: () => {
+      throw new Error("nope");
+    },
+    run: () => {},
+  }]);
+  assert.equal(report.checks[0].status, "failed");
+  assert.equal(report.checks[0].error, "failed");
+});
+
+test("runProbes() uses generic error text by default", async () => {
+  const report = await runProbes([failing("a")]);
+  assert.equal(report.status, "degraded");
+  assert.equal(report.checks[0].status, "failed");
+  assert.equal(report.checks[0].error, "failed");
+});
+
+test("runProbes() passes real errors to formatError", async () => {
+  const report = await runProbes([failing("a"), {
+    name: "b",
+    run: () => Promise.reject("raw"),
+  }], {
+    formatError: (e) => `E: ${e.message}`,
+  });
+  assert.equal(report.checks[0].error, "E: boom");
+  assert.equal(report.checks[1].error, "E: raw");
+});
+
+test("runProbes() times out and aborts the signal", async () => {
+  const report = await runProbes([hanging("a", true)]);
+  assert.equal(report.status, "unhealthy");
+  assert.equal(report.checks[0].status, "timeout");
+  assert.equal(report.checks[0].error, "timed out after 20ms");
+});
+
+test("runProbes() falls back to the option-level timeout", async () => {
+  const report = await runProbes([{
+    name: "a",
+    run: (signal) =>
+      new Promise<void>((_, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason));
+      }),
+  }], { timeoutMs: 10 });
+  assert.equal(report.checks[0].status, "timeout");
+  assert.equal(report.checks[0].error, "timed out after 10ms");
+});
+
+test("runProbes() runs probes concurrently", async () => {
+  const slow = (name: string): Probe => ({
+    name,
+    run: () => delay(30),
+  });
+  const started = performance.now();
+  await runProbes([slow("a"), slow("b"), slow("c")]);
+  assert.ok(performance.now() - started < 80);
+});
+
+test("runProbes() accepts probes resolving to values", async () => {
+  const report = await runProbes([
+    { name: "a", run: () => Promise.resolve({ rows: [1] }) },
+    { name: "b", run: () => "PONG" },
+    { name: "c", run: () => 42 },
+  ]);
+  assert.equal(report.status, "ok");
+});

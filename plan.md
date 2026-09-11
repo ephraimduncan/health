@@ -665,34 +665,34 @@ yet.
 - [x] 0.12 Create `packages/health` skeleton (empty `src/mod.ts` exporting nothing) so `deno install` produces `deno.lock`; commit `deno.lock`.
 - [x] 0.13 Verify `deno task check` and `deno task test` pass on the empty workspace; first commit.
 
-### Phase 1 — core `@openstatus/health`
+### Phase 1 — core `@openstatus/health` ✅
 
 Package files
-- [ ] 1.1 `packages/health/deno.json` (`name`, `version 0.1.0`, `exports ./src/mod.ts`, tasks `build`, `test`, `test:node`).
-- [ ] 1.2 `packages/health/package.json` per §3 template, no peer deps, `sideEffects: false`.
-- [ ] 1.3 `packages/health/tsdown.config.ts` (`platform: "neutral"`, `unbundle: true`).
+- [x] 1.1 `packages/health/deno.json` (`name`, `version 0.1.0`, `exports ./src/mod.ts`, tasks `build`, `test`, `test:node`).
+- [x] 1.2 `packages/health/package.json` per §3 template, no peer deps, `sideEffects: false`.
+- [x] 1.3 `packages/health/tsdown.config.ts` (`platform: "neutral"`, `unbundle: true`).
 
 Source (`src/`)
-- [ ] 1.4 `types.ts`: `HealthStatus`, `CheckStatus`, `Probe`, `ProbeOverrides`, `CheckResult`, `HealthReport`, `HealthEndpointOptions<Ctx>`, `HealthResponseBody`, `HealthHttpResponse`; JSDoc on every export.
-- [ ] 1.5 `errors.ts`: `defaultFormatError` (generic strings), `timeoutMessage(ms)`; `DuplicateProbeError` (or plain `Error` with clear message).
-- [ ] 1.6 `run.ts`: `runProbes(probes, options)`; per-probe `AbortController` + timer; `Promise.allSettled`; `performance.now()` latency; `skip()` evaluated sync, throwing skip → `failed`; aggregation rule; clears timers in `finally`.
-- [ ] 1.7 `validate.ts`: `assertUniqueProbeNames(probes)` used by `createHealthCheck`.
-- [ ] 1.8 `check.ts`: `createHealthCheck(options)` → `{ report(), invalidate() }`; `cached`/`pending` dedupe; `cacheMs: 0` disables; same TTL for all outcomes.
-- [ ] 1.9 `response.ts`: `renderHealthResponse(report, options, extra)` → status code mapping (`ok`→200, `degraded`→`degradedStatusCode`, `unhealthy`→`unhealthyStatusCode`), `exposeChecks` body shapes, headers `content-type: application/json; charset=utf-8`, `cache-control: no-store`.
-- [ ] 1.10 `handler.ts`: `createHealthHandler(options)` → `(request: Request) => Promise<Response>`; GET → JSON body; HEAD → same status/headers, `null` body; other methods → 405 with `allow: GET, HEAD`; calls `extend(report, request)`.
-- [ ] 1.11 `probes.ts`: `expectOk(responseOrPromise, expectStatus?)` (drains body, rejects with status in message), `httpProbe(options)` (injectable `fetch`, passes `signal`, default `GET`), `probe(options)` identity helper.
-- [ ] 1.12 `mod.ts`: re-export types + `runProbes`, `createHealthCheck`, `renderHealthResponse`, `createHealthHandler`, `expectOk`, `httpProbe`, `probe`. No top-level side effects.
+- [x] 1.4 `types.ts`: `HealthStatus`, `CheckStatus`, `Probe`, `ProbeOverrides`, `CheckResult`, `HealthReport`, `HealthEndpointOptions<Ctx>`, `HealthResponseBody`, `HealthHttpResponse`; JSDoc on every export.
+- [x] 1.5 `errors.ts`: `defaultFormatError` (generic strings), `timeoutMessage(ms)`; `DuplicateProbeError` (or plain `Error` with clear message).
+- [x] 1.6 `run.ts`: `runProbes(probes, options)`; per-probe `AbortController` + timer; `Promise.allSettled`; `performance.now()` latency; `skip()` evaluated sync, throwing skip → `failed`; aggregation rule; clears timers in `finally`.
+- [x] 1.7 `validate.ts`: `assertUniqueProbeNames(probes)` used by `createHealthCheck`.
+- [x] 1.8 `check.ts`: `createHealthCheck(options)` → `{ report(), invalidate() }`; `cached`/`pending` dedupe; `cacheMs: 0` disables; same TTL for all outcomes.
+- [x] 1.9 `response.ts`: `renderHealthResponse(report, options, extra)` → status code mapping (`ok`→200, `degraded`→`degradedStatusCode`, `unhealthy`→`unhealthyStatusCode`), `exposeChecks` body shapes, headers `content-type: application/json; charset=utf-8`, `cache-control: no-store`.
+- [x] 1.10 `handler.ts`: `createHealthHandler(options)` → `(request: Request) => Promise<Response>`; GET → JSON body; HEAD → same status/headers, `null` body; other methods → 405 with `allow: GET, HEAD`; calls `extend(report, request)`.
+- [x] 1.11 `probes.ts`: `expectOk(responseOrPromise, expectStatus?)` (drains body, rejects with status in message), `httpProbe(options)` (injectable `fetch`, passes `signal`, default `GET`), `probe(options)` identity helper.
+- [x] 1.12 `mod.ts`: re-export types + `runProbes`, `createHealthCheck`, `renderHealthResponse`, `createHealthHandler`, `expectOk`, `httpProbe`, `probe`. No top-level side effects.
 
 Tests (`node:test`, one file per source file)
-- [ ] 1.13 `run.test.ts`: aggregation table (all ok; skipped only; non-critical fail → degraded; critical fail → unhealthy; critical timeout → unhealthy; mixed); latency populated; timeout aborts `signal` and reports `timed out after Nms`; throwing `skip` → failed; generic vs custom `formatError`; probe-level `timeoutMs` overrides endpoint default.
-- [ ] 1.14 `check.test.ts`: duplicate names throw at construction; cache hit within TTL; cache miss after TTL (fake timers or small TTL + `delay`); concurrent `report()` calls run probes once; `invalidate()` forces re-run; failed report cached for same TTL; `cacheMs: 0` runs every time but still dedupes in-flight.
-- [ ] 1.15 `response.test.ts`: status code mapping incl. overrides (`unhealthyStatusCode: 200`); `exposeChecks: false` body is exactly `{ status, checkedAt }` + `extend` fields; `exposeChecks: true` includes `latencyMs` + `checks`; headers.
-- [ ] 1.16 `handler.test.ts`: GET/HEAD/405; body JSON round-trip; `extend` receives the `Request`; async `extend`.
-- [ ] 1.17 `probes.test.ts`: `expectOk` on ok / non-ok / `expectStatus`; `httpProbe` passes `signal`, headers, method; rejects on non-2xx; overrides honoured.
+- [x] 1.13 `run.test.ts`: aggregation table (all ok; skipped only; non-critical fail → degraded; critical fail → unhealthy; critical timeout → unhealthy; mixed); latency populated; timeout aborts `signal` and reports `timed out after Nms`; throwing `skip` → failed; generic vs custom `formatError`; probe-level `timeoutMs` overrides endpoint default.
+- [x] 1.14 `check.test.ts`: duplicate names throw at construction; cache hit within TTL; cache miss after TTL (fake timers or small TTL + `delay`); concurrent `report()` calls run probes once; `invalidate()` forces re-run; failed report cached for same TTL; `cacheMs: 0` runs every time but still dedupes in-flight.
+- [x] 1.15 `response.test.ts`: status code mapping incl. overrides (`unhealthyStatusCode: 200`); `exposeChecks: false` body is exactly `{ status, checkedAt }` + `extend` fields; `exposeChecks: true` includes `latencyMs` + `checks`; headers.
+- [x] 1.16 `handler.test.ts`: GET/HEAD/405; body JSON round-trip; `extend` receives the `Request`; async `extend`.
+- [x] 1.17 `probes.test.ts`: `expectOk` on ok / non-ok / `expectStatus`; `httpProbe` passes `signal`, headers, method; rejects on non-2xx; overrides honoured.
 
 Docs
-- [ ] 1.18 `packages/health/README.md`: install (`deno add jsr:@openstatus/health` / `npm i @openstatus/health`), Probe contract, `Deno.serve(createHealthHandler({...}))` example, options table (§4.3), response shapes, `exposeChecks`/`unhealthyStatusCode` guidance, hand-written probe example with `skip`.
-- [ ] 1.19 `deno task check && deno task test` green; `deno publish --dry-run` for the core passes (JSR "slow types" — add explicit return types everywhere).
+- [x] 1.18 `packages/health/README.md`: install (`deno add jsr:@openstatus/health` / `npm i @openstatus/health`), Probe contract, `Deno.serve(createHealthHandler({...}))` example, options table (§4.3), response shapes, `exposeChecks`/`unhealthyStatusCode` guidance, hand-written probe example with `skip`.
+- [x] 1.19 `deno task check && deno task test` green; `deno publish --dry-run` for the core passes (JSR "slow types" — add explicit return types everywhere).
 
 ### Phase 2 — server adapters
 

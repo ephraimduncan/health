@@ -10,5 +10,12 @@
     "build": "tsdown",
     "test": "deno test --allow-net --allow-env",
     "test:node": "node --experimental-transform-types --test"
+  },
+  "publish": {
+    "exclude": [
+      "**/*.test.ts",
+      "tsdown.config.ts",
+      "dist/"
+    ]
   }
 }
