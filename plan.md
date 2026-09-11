@@ -584,16 +584,16 @@ is passed through), threshold behaviour (supabase), and that
 
 ## 7. Tree-shaking guarantees (checklist)
 
-- [ ] One concern per package; no umbrella barrel that re-exports adapters or
+- [x] One concern per package; no umbrella barrel that re-exports adapters or
       probes from the core.
-- [ ] `"sideEffects": false` in every `package.json`; no top-level statements
+- [x] `"sideEffects": false` in every `package.json`; no top-level statements
       other than declarations in any `src/*.ts`.
-- [ ] ESM-first (`"type": "module"`, `exports.import`), CJS only as fallback.
-- [ ] `tsdown` `unbundle: true` so each source file is its own output module.
-- [ ] Client libraries are `import type` only (turso, supabase, express
+- [x] ESM-first (`"type": "module"`, `exports.import`), CJS only as fallback.
+- [x] `tsdown` `unbundle: true` so each source file is its own output module.
+- [x] Client libraries are `import type` only (turso, supabase, express
       req/res, next); runtime imports limited to what is actually called
       (`hono`, `elysia`, `express.Router`, `drizzle-orm`'s `sql`).
-- [ ] `scripts/check_treeshake.ts` (CI job): for each package, esbuild-bundle
+- [x] `scripts/check_treeshake.ts` (CI job): for each package, esbuild-bundle
       a one-line consumer (`import { unkeyProbe } from "@openstatus/health-unkey"`)
       from `dist/` with `--bundle --metafile`, and fail if the metafile
       contains any module from another framework/client package (`hono`,
@@ -646,8 +646,8 @@ Versioning: all packages share one version (`scripts/check_versions.ts` fails
 
 `0.1.0` = core + all four adapters + all five probes, tagged when `check`,
 `test-deno`, `test-node` and `treeshake` are green. Phases are sequential;
-tasks inside a phase are ordered by dependency. Nothing below is implemented
-yet.
+tasks inside a phase are ordered by dependency. Phases 0–3 are complete and
+Phase 4 is complete up to the manual repo/tag steps (4.9, 4.10).
 
 ### Phase 0 — repository scaffold ✅
 
@@ -694,88 +694,90 @@ Docs
 - [x] 1.18 `packages/health/README.md`: install (`deno add jsr:@openstatus/health` / `npm i @openstatus/health`), Probe contract, `Deno.serve(createHealthHandler({...}))` example, options table (§4.3), response shapes, `exposeChecks`/`unhealthyStatusCode` guidance, hand-written probe example with `skip`.
 - [x] 1.19 `deno task check && deno task test` green; `deno publish --dry-run` for the core passes (JSR "slow types" — add explicit return types everywhere).
 
-### Phase 2 — server adapters
+### Phase 2 — server adapters ✅
 
 Shared
-- [ ] 2.0 Add `packages/hono`, `packages/next`, `packages/elysia`, `packages/express` to root `deno.json` `workspace`; extend CI `test-node` job (added here since the first built packages appear now).
+- [x] 2.0 Add `packages/hono`, `packages/next`, `packages/elysia`, `packages/express` to root `deno.json` `workspace`; extend CI `test-node` job (added here since the first built packages appear now).
+  - Note: the `@openstatus/health` peer dependency is declared as `^0.1.0`, not `workspace:^` — npm does not rewrite the `workspace:` protocol on publish, so consumers' `npm install` would fail. `update_versions.ts` keeps the range in sync and `check_versions.ts` enforces it.
 
 `@openstatus/health-hono`
-- [ ] 2.1 `deno.json`, `package.json` (peer `@openstatus/health workspace:^`, `hono ^4.0.0`; dev `hono`), `tsdown.config.ts` (`neutral`).
-- [ ] 2.2 `src/mod.ts`: `healthRoute(options: HealthEndpointOptions<Context>): Hono` — `new Hono({ strict: false })`, `get`+`head` on `options.path ?? "/health"`, `createHealthCheck` once, `c.json(body, status, headers)`; HEAD returns `c.body(null, status, headers)`.
-- [ ] 2.3 `src/mod.test.ts`: `app.route("/", healthRoute(...))` + `app.request("/health")`, `/health/`, HEAD, custom `path`, 503 on unhealthy, `unhealthyStatusCode: 200`, `extend` receives Hono `Context` (`c.get`), duplicate-name throw.
-- [ ] 2.4 `README.md`: mount example, `extend` with `requestId`, note on `strict: false`.
-- [ ] 2.5 `examples/hono/main.ts`: `Deno.serve` + all five probes (turso, drizzle, tinybird, unkey, supabase) with env-driven `skip`.
+- [x] 2.1 `deno.json`, `package.json` (peer `@openstatus/health workspace:^`, `hono ^4.0.0`; dev `hono`), `tsdown.config.ts` (`neutral`).
+- [x] 2.2 `src/mod.ts`: `healthRoute(options: HealthEndpointOptions<Context>): Hono` — `new Hono({ strict: false })`, `get`+`head` on `options.path ?? "/health"`, `createHealthCheck` once, `c.json(body, status, headers)`; HEAD returns `c.body(null, status, headers)`.
+- [x] 2.3 `src/mod.test.ts`: `app.route("/", healthRoute(...))` + `app.request("/health")`, `/health/`, HEAD, custom `path`, 503 on unhealthy, `unhealthyStatusCode: 200`, `extend` receives Hono `Context` (`c.get`), duplicate-name throw.
+- [x] 2.4 `README.md`: mount example, `extend` with `requestId`, note on `strict: false`.
+- [x] 2.5 `examples/hono/main.ts`: `Deno.serve` + all five probes (turso, drizzle, tinybird, unkey, supabase) with env-driven `skip`.
 
 `@openstatus/health-next`
-- [ ] 2.6 `deno.json`, `package.json` (peer `next ^14 || ^15`, types only; dev `next`), `tsdown.config.ts` (`neutral`).
-- [ ] 2.7 `src/mod.ts`: `healthRoute(options: HealthEndpointOptions<NextRequest>): { GET, HEAD }` wrapping `createHealthHandler`; `import type { NextRequest } from "next/server"`; document that `path` is ignored.
-- [ ] 2.8 `src/mod.test.ts`: call `GET(new Request(...))`/`HEAD(...)` directly; status/body/headers; `extend` receives the request.
-- [ ] 2.9 `README.md`: `app/health/route.ts` example with `export const dynamic = "force-dynamic"`, Edge runtime note.
-- [ ] 2.10 `examples/next/app/health/route.ts` (type-checked only).
+- [x] 2.6 `deno.json`, `package.json` (peer `next ^14 || ^15`, types only; dev `next`), `tsdown.config.ts` (`neutral`).
+- [x] 2.7 `src/mod.ts`: `healthRoute(options: HealthEndpointOptions<NextRequest>): { GET, HEAD }` wrapping `createHealthHandler`; `import type { NextRequest } from "next/server"`; document that `path` is ignored.
+- [x] 2.8 `src/mod.test.ts`: call `GET(new Request(...))`/`HEAD(...)` directly; status/body/headers; `extend` receives the request.
+- [x] 2.9 `README.md`: `app/health/route.ts` example with `export const dynamic = "force-dynamic"`, Edge runtime note.
+- [x] 2.10 `examples/next/app/health/route.ts` (type-checked only).
 
 `@openstatus/health-elysia`
-- [ ] 2.11 `deno.json` (test task may need `--no-check` like logtape if Elysia types are heavy), `package.json` (peer `elysia ^1.4.0`), `tsdown.config.ts` (`neutral`).
-- [ ] 2.12 `src/mod.ts`: `health(options): Elysia` — `new Elysia({ name: "@openstatus/health" })`, `.get(path)`/`.head(path)`, `set.status`/`set.headers`; structural `ElysiaHealthContext` type.
-- [ ] 2.13 `src/mod.test.ts`: `app.handle(new Request("http://localhost/health"))`, HEAD, custom path, status overrides, `extend` receives context, plugin dedupe when `.use`d twice.
-- [ ] 2.14 `README.md` + `examples/elysia/main.ts`.
+- [x] 2.11 `deno.json` (test task may need `--no-check` like logtape if Elysia types are heavy), `package.json` (peer `elysia ^1.4.0`), `tsdown.config.ts` (`neutral`).
+- [x] 2.12 `src/mod.ts`: `health(options): Elysia` — `new Elysia({ name: "@openstatus/health" })`, `.get(path)`/`.head(path)`, `set.status`/`set.headers`; structural `ElysiaHealthContext` type.
+- [x] 2.13 `src/mod.test.ts`: `app.handle(new Request("http://localhost/health"))`, HEAD, custom path, status overrides, `extend` receives context, plugin dedupe when `.use`d twice.
+- [x] 2.14 `README.md` + `examples/elysia/main.ts`.
 
 `@openstatus/health-express`
-- [ ] 2.15 `deno.json`, `package.json` (peer `express ^4 || ^5`; dev `express ^5`, `@types/express`), `tsdown.config.ts` (`platform: "node"`).
-- [ ] 2.16 `src/mod.ts`: `healthRouter(options): Router` — `Router()`, `get`/`head`, `res.status(...).set(headers).json(body)` / `.end()`; minimal `ExpressRequest`/`ExpressResponse` interfaces; async errors forwarded to `next(err)`.
-- [ ] 2.17 `src/mod.test.ts`: `node:http` server on port 0, `fetch` GET/HEAD, custom path, status overrides, `extend` receives `req`.
-- [ ] 2.18 `README.md` + `examples/express/main.ts`.
+- [x] 2.15 `deno.json`, `package.json` (peer `express ^4 || ^5`; dev `express ^5`, `@types/express`), `tsdown.config.ts` (`platform: "node"`).
+- [x] 2.16 `src/mod.ts`: `healthRouter(options): Router` — `Router()`, `get`/`head`, `res.status(...).set(headers).json(body)` / `.end()`; minimal `ExpressRequest`/`ExpressResponse` interfaces; async errors forwarded to `next(err)`.
+- [x] 2.17 `src/mod.test.ts`: `node:http` server on port 0, `fetch` GET/HEAD, custom path, status overrides, `extend` receives `req`.
+- [x] 2.18 `README.md` + `examples/express/main.ts`.
 
 Phase gate
-- [ ] 2.19 `deno task check`, `deno task test`, `deno task build`, `deno task test:node` green; `deno publish --dry-run` for all four adapters.
+- [x] 2.19 `deno task check`, `deno task test`, `deno task build`, `deno task test:node` green; `deno publish --dry-run` for all four adapters.
 
-### Phase 3 — probe packages
+### Phase 3 — probe packages ✅
 
 Shared
-- [ ] 3.0 Add the five probe packages to root `deno.json` `workspace`. Each probe package keeps its own tiny `src/fake-fetch.ts` / fake-client test helper (not exported) — the core stays free of test utilities.
+- [x] 3.0 Add the five probe packages to root `deno.json` `workspace`. Each probe package keeps its own tiny `src/fake-fetch.ts` / fake-client test helper (not exported) — the core stays free of test utilities.
 
 `@openstatus/health-unkey`
-- [ ] 3.1 Package files (no peer deps besides core), `tsdown` neutral.
-- [ ] 3.2 `src/mod.ts`: `unkeyProbe({ baseUrl = "https://api.unkey.com", fetch, ...overrides })` → `httpProbe` on `/v2/liveness`; default `name: "unkey"`, `critical: false`.
-- [ ] 3.3 Tests: hits the right URL; ok on 200; failed on 500; timeout aborts; overrides.
-- [ ] 3.4 `README.md`.
+- [x] 3.1 Package files (no peer deps besides core), `tsdown` neutral.
+- [x] 3.2 `src/mod.ts`: `unkeyProbe({ baseUrl = "https://api.unkey.com", fetch, ...overrides })` → `httpProbe` on `/v2/liveness`; default `name: "unkey"`, `critical: false`.
+- [x] 3.3 Tests: hits the right URL; ok on 200; failed on 500; timeout aborts; overrides.
+- [x] 3.4 `README.md`.
 
 `@openstatus/health-tinybird`
-- [ ] 3.5 Package files, `tsdown` neutral.
-- [ ] 3.6 `src/mod.ts`: `tinybirdProbe({ baseUrl = "https://api.tinybird.co", fetch, ...overrides })` → `httpProbe` on `/v0/health`; default `name: "tinybird"`, `critical: false`; JSDoc explains why unauthenticated.
-- [ ] 3.7 Tests as 3.3, plus custom `baseUrl` (self-hosted / `TINYBIRD_URL`).
-- [ ] 3.8 `README.md` with `skip: () => env.TINYBIRD_NOOP` idiom.
+- [x] 3.5 Package files, `tsdown` neutral.
+- [x] 3.6 `src/mod.ts`: `tinybirdProbe({ baseUrl = "https://api.tinybird.co", fetch, ...overrides })` → `httpProbe` on `/v0/health`; default `name: "tinybird"`, `critical: false`; JSDoc explains why unauthenticated.
+- [x] 3.7 Tests as 3.3, plus custom `baseUrl` (self-hosted / `TINYBIRD_URL`).
+- [x] 3.8 `README.md` with `skip: () => env.TINYBIRD_NOOP` idiom.
 
 `@openstatus/health-turso`
-- [ ] 3.9 Package files (peer `@libsql/client` optional, types only), `tsdown` neutral.
-- [ ] 3.10 `src/mod.ts`: `LibsqlLikeClient = { execute(sql: string): Promise<unknown> }`; `tursoProbe({ client, ...overrides })` → `client.execute("select 1")`; default `name: "database"`, `critical: true`.
-- [ ] 3.11 Tests with a fake client: resolves; rejects; `signal` ignored gracefully (libsql has no abort) but timeout still reported.
-- [ ] 3.12 `README.md`.
+- [x] 3.9 Package files (peer `@libsql/client` optional, types only), `tsdown` neutral.
+- [x] 3.10 `src/mod.ts`: `LibsqlLikeClient = { execute(sql: string): Promise<unknown> }`; `tursoProbe({ client, ...overrides })` → `client.execute("select 1")`; default `name: "database"`, `critical: true`.
+- [x] 3.11 Tests with a fake client: resolves; rejects; `signal` ignored gracefully (libsql has no abort) but timeout still reported.
+- [x] 3.12 `README.md`.
 
 `@openstatus/health-drizzle`
-- [ ] 3.13 Package files (peer `drizzle-orm >=0.30`), `tsdown` neutral.
-- [ ] 3.14 `src/mod.ts`: `DrizzleLikeDb = { execute?(q): Promise<unknown>; run?(q): Promise<unknown> }`; `drizzleProbe({ db, ...overrides })` → prefer `execute`, else `run`, else throw at construction ("unsupported drizzle instance"); imports `sql` from `drizzle-orm`; default `name: "database"`, `critical: true`.
-- [ ] 3.15 Tests: fake pg-style db (`execute`), fake sqlite-style db (`run`), neither → construction error; rejection → failed.
-- [ ] 3.16 `README.md` with the openstatus `drizzle-orm/libsql/http` example.
+- [x] 3.13 Package files (peer `drizzle-orm >=0.30`), `tsdown` neutral.
+- [x] 3.14 `src/mod.ts`: `DrizzleLikeDb = { execute?(q): Promise<unknown>; run?(q): Promise<unknown> }`; `drizzleProbe({ db, ...overrides })` → prefer `execute`, else `run`, else throw at construction ("unsupported drizzle instance"); imports `sql` from `drizzle-orm`; default `name: "database"`, `critical: true`.
+- [x] 3.15 Tests: fake pg-style db (`execute`), fake sqlite-style db (`run`), neither → construction error; rejection → failed.
+- [x] 3.16 `README.md` with the openstatus `drizzle-orm/libsql/http` example.
 
 `@openstatus/health-supabase`
-- [ ] 3.17 Package files (peer `@supabase/supabase-js ^2`, types only), `tsdown` neutral.
-- [ ] 3.18 `src/mod.ts`: `SupabaseLikeClient = { rpc(fn: string, args?, opts?): PromiseLike<{ data: unknown; error: unknown }> }`; `supabaseProbe({ client, rpc = "health_connection_pressure", maxConnectionPercent = 90, ...overrides })`; fail on `error`, fail when `connection_percent > max`; default `name: "supabase"`, `critical: false`; pass `signal` via `.abortSignal(signal)` when the builder exposes it.
-- [ ] 3.19 Tests: fake client returning rows below/above threshold, `error` set, unexpected shape → failed.
-- [ ] 3.20 `README.md`: the SQL function from §6, grant guidance (`service_role` only), threshold docs, link to the Supabase Detecting-issues guide.
+- [x] 3.17 Package files (peer `@supabase/supabase-js ^2`, types only), `tsdown` neutral.
+- [x] 3.18 `src/mod.ts`: `SupabaseLikeClient = { rpc(fn: string, args?, opts?): PromiseLike<{ data: unknown; error: unknown }> }`; `supabaseProbe({ client, rpc = "health_connection_pressure", maxConnectionPercent = 90, ...overrides })`; fail on `error`, fail when `connection_percent > max`; default `name: "supabase"`, `critical: false`; pass `signal` via `.abortSignal(signal)` when the builder exposes it.
+- [x] 3.19 Tests: fake client returning rows below/above threshold, `error` set, unexpected shape → failed.
+- [x] 3.20 `README.md`: the SQL function from §6, grant guidance (`service_role` only), threshold docs, link to the Supabase Detecting-issues guide.
 
 Phase gate
-- [ ] 3.21 Update `examples/*` to wire all five probes; `deno task check` (incl. `deno check examples/`), `test`, `build`, `test:node` green; `deno publish --dry-run` for all probes.
+- [x] 3.21 Update `examples/*` to wire all five probes; `deno task check` (incl. `deno check examples/`), `test`, `build`, `test:node` green; `deno publish --dry-run` for all probes.
 
-### Phase 4 — release hardening
+### Phase 4 — release hardening (4.9 / 4.10 pending maintainer)
 
-- [ ] 4.1 `scripts/check_treeshake.ts`: for each package build a temp consumer importing one symbol from `dist/mod.js`, run esbuild `--bundle --metafile --platform=neutral --external:@openstatus/*` (externals only for cross-package deps), parse metafile, fail if any module path contains a framework/client name not in that package's allowlist.
-- [ ] 4.2 `check:treeshake` task + `treeshake` CI job (needs `deno task build` first).
-- [ ] 4.3 CI `publish-dry-run` job: `deno publish --dry-run` after build, so a release-breaking change is caught before the manual publish.
-- [ ] 4.4 `RELEASING.md`: the manual release checklist (bump with `update-versions`, `check:versions`, `deno publish`, `deno task build`, `npm publish --access public` per package, tag).
-- [ ] 4.5 Root `README.md`: finish package table with JSR/npm badges, quick start for each adapter, probe list, "writing your own probe" section.
-- [ ] 4.6 `deno publish --dry-run` and `npm pack --dry-run` for every package; inspect `dist/` contents (`.js`, `.cjs`, `.d.ts`, `.d.cts`, sourcemaps only).
-- [ ] 4.7 Smoke-test the npm tarballs from a scratch Node project (`npm i ./packages/*/openstatus-*.tgz`) with both `import` and `require`.
-- [ ] 4.8 `CHANGES.md` with a `0.1.0` entry.
+- [x] 4.1 `scripts/check_treeshake.ts`: for each package build a temp consumer importing one symbol from `dist/mod.js`, run esbuild `--bundle --metafile --platform=neutral --external:@openstatus/*` (externals only for cross-package deps), parse metafile, fail if any module path contains a framework/client name not in that package's allowlist.
+  - Note: externals are the *other* workspace members only (externalising `@openstatus/*` wholesale skipped the package under test), and the script also fails if `dist/` was not bundled at all.
+- [x] 4.2 `check:treeshake` task + `treeshake` CI job (needs `deno task build` first).
+- [x] 4.3 CI `publish-dry-run` job: `deno publish --dry-run` after build, so a release-breaking change is caught before the manual publish.
+- [x] 4.4 `RELEASING.md`: the manual release checklist (bump with `update-versions`, `check:versions`, `deno publish`, `deno task build`, `npm publish --access public` per package, tag).
+- [x] 4.5 Root `README.md`: finish package table with JSR/npm badges, quick start for each adapter, probe list, "writing your own probe" section.
+- [x] 4.6 `deno publish --dry-run` and `npm pack --dry-run` for every package; inspect `dist/` contents (`.js`, `.cjs`, `.d.ts`, `.d.cts`, sourcemaps only).
+- [x] 4.7 Smoke-test the npm tarballs from a scratch Node project (`npm i ./packages/*/openstatus-*.tgz`) with both `import` and `require`. Verified 2026-09-11 with Node 24: all four adapters and five probes load and serve from ESM and CJS.
+- [x] 4.8 `CHANGES.md` with a `0.1.0` entry.
 - [ ] 4.9 Create GitHub repo `openstatusHQ/health`, push, confirm CI green on `main`.
 - [ ] 4.10 Tag `0.1.0` locally; publishing to JSR/npm is done manually by the maintainer per `RELEASING.md`.
 

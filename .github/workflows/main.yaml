@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - "*"
+    tags:
+      - "*"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,3 +44,53 @@ jobs:
       - run: deno task test --coverage=.cov
       - if: runner.os == 'Linux'
         run: deno coverage --lcov .cov > .cov.lcov
+      - if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: .cov.lcov
+
+  test-node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: deno ci
+      - run: deno task build
+      - run: deno task test:node
+
+  treeshake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno ci
+      - run: deno task check:treeshake
+
+  publish-dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: deno ci
+      - run: deno publish --dry-run
+      - run: deno task build
+      - run: |
+          for dir in packages/*/; do
+            (cd "$dir" && npm pack --dry-run --ignore-scripts)
+          done

@@ -23,7 +23,7 @@ Deno.serve(
 
 A `select 1` never exhausts a pool or touches a table — just proves the
 connection is alive. The client is typed structurally as
-`{ execute(sql: string): Promise<unknown> }`, so `@libsql/client` is only a
+`{ execute(sql: string): Promise<ProbeResult> }`, so `@libsql/client` is only a
 peer dependency for its types; the probe adds no runtime import of it.
 
 ```ts

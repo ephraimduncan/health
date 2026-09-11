@@ -69,11 +69,17 @@ supabaseProbe({
 });
 ```
 
-Attach the row to a custom error message with `formatError`:
+A threshold breach throws `SupabaseConnectionPressureError`, which carries
+the full `row`. Expose it through `formatError`:
 
 ```ts
+import { SupabaseConnectionPressureError } from "@openstatus/health-supabase";
+
 createHealthHandler({
   probes: [supabaseProbe({ client })],
-  formatError: (error) => error.message,
+  formatError: (error) =>
+    error instanceof SupabaseConnectionPressureError
+      ? `${error.message} (${error.row.current_connections}/${error.row.max_connections})`
+      : error.message,
 });
 ```

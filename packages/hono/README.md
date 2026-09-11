@@ -25,8 +25,9 @@ app.route(
 ```
 
 `healthRoute(options)` returns a `Hono` sub-app that answers `GET` and `HEAD`
-on `options.path` (default `/health`, with and without a trailing slash).
-Mount it with `app.route("/", ...)`.
+on `options.path` (default `/health`). Both `/health` and `/health/` are
+registered, so the trailing slash matches regardless of the parent app's
+`strict` setting. Mount it with `app.route("/", ...)`.
 
 `extend` receives the Hono `Context` as its second argument. All other options
 are documented in `@openstatus/health`.
