@@ -1,0 +1,6 @@
+node_modules/
+dist/
+coverage/
+.cov/
+.test-report.xml
+.DS_Store

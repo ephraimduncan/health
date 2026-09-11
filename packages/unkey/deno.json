@@ -1,0 +1,14 @@
+{
+  "name": "@openstatus/health-unkey",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": "./src/mod.ts",
+  "exclude": [
+    "dist/"
+  ],
+  "tasks": {
+    "build": "tsdown",
+    "test": "deno test --allow-net --allow-env",
+    "test:node": "node --experimental-transform-types --test"
+  }
+}

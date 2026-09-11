@@ -1,0 +1,53 @@
+{
+  "workspace": [
+    "./packages/health",
+    "./packages/hono",
+    "./packages/elysia",
+    "./packages/express",
+    "./packages/next",
+    "./packages/tinybird",
+    "./packages/drizzle",
+    "./packages/turso",
+    "./packages/supabase",
+    "./packages/unkey"
+  ],
+  "imports": {
+    "@std/assert": "jsr:@std/assert@^1.0.13",
+    "@std/async": "jsr:@std/async@^1.0.13",
+    "@std/path": "jsr:@std/path@^1.1.0",
+    "esbuild": "npm:esbuild@^0.25.0",
+    "tsdown": "npm:tsdown@^0.12.7",
+    "typescript": "npm:typescript@^5.8.3",
+    "hono": "npm:hono@^4.0.0",
+    "elysia": "npm:elysia@^1.4.0",
+    "express": "npm:express@^5.2.1",
+    "@types/express": "npm:@types/express@^5.0.6",
+    "next": "npm:next@^15.0.0",
+    "drizzle-orm": "npm:drizzle-orm@^0.44.0",
+    "@libsql/client": "npm:@libsql/client@^0.15.0",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.0.0"
+  },
+  "exclude": ["**/dist/", "**/node_modules/", "coverage/", ".cov/"],
+  "fmt": { "exclude": ["**/*.md"] },
+  "lint": { "rules": { "tags": ["recommended"] } },
+  "tasks": {
+    "check": "deno check && deno check examples/ && deno lint && deno fmt --check && deno task check:versions",
+    "fmt": "deno fmt",
+    "test": "deno test --allow-net --allow-env --allow-read --allow-sys",
+    "coverage": "rm -rf coverage && deno task test --coverage && deno coverage --html coverage",
+    "build": "deno install && deno task --filter '@openstatus/*' build",
+    "test:node": {
+      "dependencies": ["build"],
+      "command": "deno task --filter '@openstatus/*' test:node"
+    },
+    "check:treeshake": {
+      "dependencies": ["build"],
+      "command": "deno run --allow-read --allow-write --allow-env --allow-run scripts/check_treeshake.ts"
+    },
+    "test-all": {
+      "dependencies": ["check", "test", "test:node", "check:treeshake"]
+    },
+    "check:versions": "deno run --allow-read scripts/check_versions.ts",
+    "update-versions": "deno run --allow-read --allow-write scripts/update_versions.ts"
+  }
+}

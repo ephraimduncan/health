@@ -1,0 +1,60 @@
+{
+  "name": "@openstatus/health-next",
+  "version": "0.1.0",
+  "description": "Next.js App Router adapter for @openstatus/health",
+  "keywords": [
+    "openstatus",
+    "health",
+    "healthcheck",
+    "next",
+    "nextjs",
+    "app-router"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "openstatus",
+    "url": "https://www.openstatus.dev/"
+  },
+  "homepage": "https://github.com/openstatusHQ/health",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openstatusHQ/health.git",
+    "directory": "packages/next/"
+  },
+  "bugs": {
+    "url": "https://github.com/openstatusHQ/health/issues"
+  },
+  "type": "module",
+  "module": "./dist/mod.js",
+  "main": "./dist/mod.cjs",
+  "types": "./dist/mod.d.ts",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/mod.d.ts",
+        "require": "./dist/mod.d.cts"
+      },
+      "import": "./dist/mod.js",
+      "require": "./dist/mod.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist/"
+  ],
+  "peerDependencies": {
+    "@openstatus/health": "workspace:^",
+    "next": "^14.0.0 || ^15.0.0"
+  },
+  "devDependencies": {
+    "next": "^15.0.0",
+    "tsdown": "^0.12.7",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepack": "tsdown",
+    "test": "node --experimental-transform-types --test"
+  }
+}

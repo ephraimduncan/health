@@ -1,0 +1,56 @@
+{
+  "name": "@openstatus/health",
+  "version": "0.1.0",
+  "description": "Framework-agnostic health endpoint core: probes, caching, response rendering",
+  "keywords": [
+    "openstatus",
+    "health",
+    "healthcheck",
+    "health",
+    "healthcheck",
+    "probe",
+    "readiness"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "openstatus",
+    "url": "https://www.openstatus.dev/"
+  },
+  "homepage": "https://github.com/openstatusHQ/health",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openstatusHQ/health.git",
+    "directory": "packages/health/"
+  },
+  "bugs": {
+    "url": "https://github.com/openstatusHQ/health/issues"
+  },
+  "type": "module",
+  "module": "./dist/mod.js",
+  "main": "./dist/mod.cjs",
+  "types": "./dist/mod.d.ts",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/mod.d.ts",
+        "require": "./dist/mod.d.cts"
+      },
+      "import": "./dist/mod.js",
+      "require": "./dist/mod.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist/"
+  ],
+  "devDependencies": {
+    "tsdown": "^0.12.7",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "prepack": "tsdown",
+    "test": "node --experimental-transform-types --test"
+  }
+}
