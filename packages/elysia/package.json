@@ -43,7 +43,7 @@
     "dist/"
   ],
   "peerDependencies": {
-    "@openstatus/health": "workspace:^",
+    "@openstatus/health": "^0.1.0",
     "elysia": "^1.4.0"
   },
   "devDependencies": {

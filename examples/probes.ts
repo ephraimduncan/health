@@ -1,0 +1,48 @@
+import { createClient as createLibsqlClient } from "@libsql/client";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { drizzle } from "drizzle-orm/libsql/http";
+import type { Probe } from "@openstatus/health";
+import { drizzleProbe } from "@openstatus/health-drizzle";
+import { supabaseProbe } from "@openstatus/health-supabase";
+import { tinybirdProbe } from "@openstatus/health-tinybird";
+import { tursoProbe } from "@openstatus/health-turso";
+import { unkeyProbe } from "@openstatus/health-unkey";
+
+const env = (name: string): string | undefined => Deno.env.get(name);
+
+export function exampleProbes(): Probe[] {
+  const libsql = createLibsqlClient({
+    url: env("TURSO_URL") ?? "file::memory:",
+    authToken: env("TURSO_TOKEN"),
+  });
+  const db = drizzle(libsql);
+  const supabase = createSupabaseClient(
+    env("SUPABASE_URL") ?? "http://localhost:54321",
+    env("SUPABASE_SERVICE_ROLE_KEY") ?? "service-role-key",
+  );
+
+  return [
+    tursoProbe({
+      client: libsql,
+      name: "turso",
+      skip: () => env("TURSO_NOOP") === "true",
+    }),
+    drizzleProbe({
+      db,
+      name: "drizzle",
+      skip: () => env("DRIZZLE_NOOP") === "true",
+    }),
+    tinybirdProbe({
+      baseUrl: env("TINYBIRD_URL"),
+      skip: () => env("TINYBIRD_NOOP") === "true",
+    }),
+    unkeyProbe({
+      baseUrl: env("UNKEY_URL"),
+      skip: () => env("UNKEY_NOOP") === "true",
+    }),
+    supabaseProbe({
+      client: supabase,
+      skip: () => env("SUPABASE_NOOP") === "true",
+    }),
+  ];
+}

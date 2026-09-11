@@ -42,7 +42,7 @@
     "dist/"
   ],
   "peerDependencies": {
-    "@openstatus/health": "workspace:^",
+    "@openstatus/health": "^0.1.0",
     "express": "^4.0.0 || ^5.0.0"
   },
   "devDependencies": {

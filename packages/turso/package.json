@@ -44,7 +44,7 @@
     "dist/"
   ],
   "peerDependencies": {
-    "@openstatus/health": "workspace:^",
+    "@openstatus/health": "^0.1.0",
     "@libsql/client": ">=0.5.0"
   },
   "peerDependenciesMeta": {

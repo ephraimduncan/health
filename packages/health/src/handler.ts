@@ -2,13 +2,15 @@ import { createHealthCheck } from "./check.ts";
 import { renderHealthResponse } from "./response.ts";
 import type { HealthEndpointOptions } from "./types.ts";
 
-export type HealthHandler = (request: Request) => Promise<Response>;
+export type HealthHandler<Req extends Request = Request> = (
+  request: Req,
+) => Promise<Response>;
 
-export function createHealthHandler(
-  options: HealthEndpointOptions<Request>,
-): HealthHandler {
+export function createHealthHandler<Req extends Request = Request>(
+  options: HealthEndpointOptions<Req>,
+): HealthHandler<Req> {
   const check = createHealthCheck(options);
-  return async (request: Request): Promise<Response> => {
+  return async (request: Req): Promise<Response> => {
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new Response(null, {
         status: 405,

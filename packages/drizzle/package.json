@@ -44,7 +44,7 @@
     "dist/"
   ],
   "peerDependencies": {
-    "@openstatus/health": "workspace:^",
+    "@openstatus/health": "^0.1.0",
     "drizzle-orm": ">=0.30.0"
   },
   "devDependencies": {

@@ -2,11 +2,13 @@ import { dirname, join } from "@std/path";
 
 interface Manifest {
   version?: string;
+  peerDependencies?: Record<string, string>;
 }
 
 export interface VersionedFile {
   readonly path: string;
   readonly version: string;
+  readonly corePeerRange?: string;
 }
 
 const root: string = dirname(import.meta.dirname!);
@@ -30,7 +32,12 @@ export async function versionedFiles(): Promise<VersionedFile[]> {
         throw e;
       }
       const data: Manifest = JSON.parse(text);
-      if (data.version != null) files.push({ path, version: data.version });
+      if (data.version == null) continue;
+      files.push({
+        path,
+        version: data.version,
+        corePeerRange: data.peerDependencies?.["@openstatus/health"],
+      });
     }
   }
   return files;

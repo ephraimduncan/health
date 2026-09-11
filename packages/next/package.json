@@ -44,7 +44,7 @@
     "dist/"
   ],
   "peerDependencies": {
-    "@openstatus/health": "workspace:^",
+    "@openstatus/health": "^0.1.0",
     "next": "^14.0.0 || ^15.0.0"
   },
   "devDependencies": {

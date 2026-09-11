@@ -35,10 +35,10 @@
     "fmt": "deno fmt",
     "test": "deno test --allow-net --allow-env --allow-read --allow-sys",
     "coverage": "rm -rf coverage && deno task test --coverage && deno coverage --html coverage",
-    "build": "deno install && deno task --filter '@openstatus/*' build",
+    "build": "deno install && deno task --members --jobs 1 build",
     "test:node": {
       "dependencies": ["build"],
-      "command": "deno task --filter '@openstatus/*' test:node"
+      "command": "deno task --members --jobs 1 test:node"
     },
     "check:treeshake": {
       "dependencies": ["build"],

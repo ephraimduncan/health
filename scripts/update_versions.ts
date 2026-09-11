@@ -8,10 +8,12 @@ if (version == null || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) {
 
 for (const file of await versionedFiles()) {
   const text = await Deno.readTextFile(file.path);
-  const updated = text.replace(
-    /"version":\s*"[^"]+"/,
-    `"version": "${version}"`,
-  );
+  const updated = text
+    .replace(/"version":\s*"[^"]+"/, `"version": "${version}"`)
+    .replace(
+      /"@openstatus\/health":\s*"\^[^"]+"/g,
+      `"@openstatus/health": "^${version}"`,
+    );
   await Deno.writeTextFile(file.path, updated);
   console.log(`${file.path}: ${file.version} -> ${version}`);
 }
