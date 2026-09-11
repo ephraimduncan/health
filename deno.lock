@@ -8,6 +8,7 @@
     "jsr:@std/path@^1.1.0": "1.1.4",
     "npm:@libsql/client@0.15": "0.15.15",
     "npm:@supabase/supabase-js@2": "2.116.0",
+    "npm:@tursodatabase/serverless@^1.4.0": "1.4.0",
     "npm:@types/express@^5.0.6": "5.0.6",
     "npm:drizzle-orm@0.44": "0.44.7_@libsql+client@0.15.15",
     "npm:elysia@^1.4.0": "1.4.30_@sinclair+typebox@0.34.52_exact-mirror@0.2.7_file-type@22.0.2_openapi-types@12.1.3_typescript@5.9.3",
@@ -665,6 +666,9 @@
     },
     "@tokenizer/token@0.3.0": {
       "integrity": "sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A=="
+    },
+    "@tursodatabase/serverless@1.4.0": {
+      "integrity": "sha512-ZU3T76NG/E0NTKULqJ9TggJfbdPgRaChOS4HDOu3Srds7w7fSPie7jbPHzz+CLGrxs2TtMYtYB1lH5Bh6q1w7A=="
     },
     "@types/body-parser@1.19.6": {
       "integrity": "sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g==",
@@ -1580,6 +1584,7 @@
       "jsr:@std/path@^1.1.0",
       "npm:@libsql/client@0.15",
       "npm:@supabase/supabase-js@2",
+      "npm:@tursodatabase/serverless@^1.4.0",
       "npm:@types/express@^5.0.6",
       "npm:drizzle-orm@0.44",
       "npm:elysia@^1.4.0",
@@ -1673,6 +1678,15 @@
         "packageJson": {
           "dependencies": [
             "npm:@libsql/client@0.15",
+            "npm:tsdown@~0.12.7",
+            "npm:typescript@^5.8.3"
+          ]
+        }
+      },
+      "packages/turso-serverless": {
+        "packageJson": {
+          "dependencies": [
+            "npm:@tursodatabase/serverless@^1.4.0",
             "npm:tsdown@~0.12.7",
             "npm:typescript@^5.8.3"
           ]

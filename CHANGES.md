@@ -18,8 +18,9 @@ Initial release.
   framework context to `extend()`.
 - Probes: `@openstatus/health-tinybird` (`GET /v0/health`),
   `@openstatus/health-unkey` (`GET /v2/liveness`), `@openstatus/health-turso`
-  (`select 1` on a libSQL client), `@openstatus/health-drizzle` (`select 1`
-  via `execute` or `run`), `@openstatus/health-supabase`
+  (`select 1` on a libSQL client), `@openstatus/health-turso-serverless`
+  (`select 1` on a `@tursodatabase/serverless` connection),
+  `@openstatus/health-drizzle` (`select 1` via `execute` or `run`), `@openstatus/health-supabase`
   (`health_connection_pressure()` RPC with a `maxConnectionPercent`
   threshold).
 - Published to JSR and npm (ESM + CJS, `sideEffects: false`, one output

@@ -22,6 +22,10 @@ const targets: Record<string, Target> = {
     allowed: ["drizzle-orm"],
   },
   "@openstatus/health-turso": { symbol: "tursoProbe", allowed: [] },
+  "@openstatus/health-turso-serverless": {
+    symbol: "tursoServerlessProbe",
+    allowed: [],
+  },
   "@openstatus/health-supabase": { symbol: "supabaseProbe", allowed: [] },
   "@openstatus/health-unkey": { symbol: "unkeyProbe", allowed: [] },
 };
@@ -33,6 +37,7 @@ const banned = [
   "next",
   "drizzle-orm",
   "@libsql/client",
+  "@tursodatabase/serverless",
   "@supabase/supabase-js",
 ];
 

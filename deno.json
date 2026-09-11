@@ -8,6 +8,7 @@
     "./packages/tinybird",
     "./packages/drizzle",
     "./packages/turso",
+    "./packages/turso-serverless",
     "./packages/supabase",
     "./packages/unkey"
   ],
@@ -25,6 +26,7 @@
     "next": "npm:next@^15.0.0",
     "drizzle-orm": "npm:drizzle-orm@^0.44.0",
     "@libsql/client": "npm:@libsql/client@^0.15.0",
+    "@tursodatabase/serverless": "npm:@tursodatabase/serverless@^1.4.0",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.0.0"
   },
   "exclude": ["**/dist/", "**/node_modules/", "coverage/", ".cov/"],

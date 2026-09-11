@@ -1,11 +1,13 @@
 import { createClient as createLibsqlClient } from "@libsql/client";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { connect as connectTursoServerless } from "@tursodatabase/serverless";
 import { drizzle } from "drizzle-orm/libsql/http";
 import type { Probe } from "@openstatus/health";
 import { drizzleProbe } from "@openstatus/health-drizzle";
 import { supabaseProbe } from "@openstatus/health-supabase";
 import { tinybirdProbe } from "@openstatus/health-tinybird";
 import { tursoProbe } from "@openstatus/health-turso";
+import { tursoServerlessProbe } from "@openstatus/health-turso-serverless";
 import { unkeyProbe } from "@openstatus/health-unkey";
 
 const env = (name: string): string | undefined => Deno.env.get(name);
@@ -21,11 +23,21 @@ export function exampleProbes(): Probe[] {
     env("SUPABASE_SERVICE_ROLE_KEY") ?? "service-role-key",
   );
 
+  const tursoServerless = connectTursoServerless({
+    url: env("TURSO_DATABASE_URL") ?? "http://localhost:8080",
+    authToken: env("TURSO_AUTH_TOKEN"),
+  });
+
   return [
     tursoProbe({
       client: libsql,
       name: "turso",
       skip: () => env("TURSO_NOOP") === "true",
+    }),
+    tursoServerlessProbe({
+      connection: tursoServerless,
+      name: "turso-serverless",
+      skip: () => env("TURSO_SERVERLESS_NOOP") === "true",
     }),
     drizzleProbe({
       db,
