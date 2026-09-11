@@ -53,6 +53,16 @@ Runs on Deno, Node ≥ 22, Bun and edge runtimes. Published to JSR and npm.
 | [`@openstatus/health-turso-serverless`](packages/turso-serverless) | [![JSR](https://jsr.io/badges/@openstatus/health-turso-serverless)](https://jsr.io/@openstatus/health-turso-serverless) | [![npm](https://img.shields.io/npm/v/@openstatus/health-turso-serverless)](https://www.npmjs.com/package/@openstatus/health-turso-serverless) | Turso `select 1` probe over the serverless driver (`@tursodatabase/serverless`) |
 | [`@openstatus/health-unkey`](packages/unkey) | [![JSR](https://jsr.io/badges/@openstatus/health-unkey)](https://jsr.io/@openstatus/health-unkey) | [![npm](https://img.shields.io/npm/v/@openstatus/health-unkey)](https://www.npmjs.com/package/@openstatus/health-unkey) | Unkey liveness probe |
 
+### Hosting
+
+| Package | JSR | npm | Description |
+| ------- | --- | --- | ----------- |
+| [`@openstatus/health-fly`](packages/fly) | [![JSR](https://jsr.io/badges/@openstatus/health-fly)](https://jsr.io/@openstatus/health-fly) | [![npm](https://img.shields.io/npm/v/@openstatus/health-fly)](https://www.npmjs.com/package/@openstatus/health-fly) | Fly.io region, machine and deployment |
+| [`@openstatus/health-koyeb`](packages/koyeb) | [![JSR](https://jsr.io/badges/@openstatus/health-koyeb)](https://jsr.io/@openstatus/health-koyeb) | [![npm](https://img.shields.io/npm/v/@openstatus/health-koyeb)](https://www.npmjs.com/package/@openstatus/health-koyeb) | Koyeb region, instance and deployment |
+| [`@openstatus/health-railway`](packages/railway) | [![JSR](https://jsr.io/badges/@openstatus/health-railway)](https://jsr.io/@openstatus/health-railway) | [![npm](https://img.shields.io/npm/v/@openstatus/health-railway)](https://www.npmjs.com/package/@openstatus/health-railway) | Railway region, replica, environment and deployment |
+| [`@openstatus/health-vercel`](packages/vercel) | [![JSR](https://jsr.io/badges/@openstatus/health-vercel)](https://jsr.io/@openstatus/health-vercel) | [![npm](https://img.shields.io/npm/v/@openstatus/health-vercel)](https://www.npmjs.com/package/@openstatus/health-vercel) | Vercel region, environment and deployment |
+| [`@openstatus/health-cloudflare`](packages/cloudflare) | [![JSR](https://jsr.io/badges/@openstatus/health-cloudflare)](https://jsr.io/@openstatus/health-cloudflare) | [![npm](https://img.shields.io/npm/v/@openstatus/health-cloudflare)](https://www.npmjs.com/package/@openstatus/health-cloudflare) | Cloudflare Workers colo and version metadata |
+
 Each package is its own concern with its own peer dependencies: importing
 `@openstatus/health-hono` never pulls Express, and importing
 `@openstatus/health-unkey` never pulls Drizzle. CI bundles a one-line consumer
@@ -138,7 +148,7 @@ Every adapter takes the same options:
 | `exposeChecks` | `true` | Include `latencyMs` and `checks` in the body. `false` returns only `{ status, checkedAt }` — for public endpoints. |
 | `unhealthyStatusCode` | `503` | HTTP status for `unhealthy`. Set `200` to always answer 200 and let callers read `status`. |
 | `degradedStatusCode` | `200` | HTTP status for `degraded`. |
-| `extend` | — | `(report, ctx) => object` merged into the body: region, request id, vitals. `ctx` is the framework request context. |
+| `extend` | — | `(report, ctx) => object` merged into the body: request id, vitals, or a `server` object from a hosting package. `ctx` is the framework request context. |
 | `formatError` | generic | Errors are reported as `"failed"` / `"timed out after Nms"` unless you supply `(error) => string`. |
 
 Aggregation: a failing or timed-out **critical** probe makes the report
@@ -188,6 +198,60 @@ const docs = httpProbe({ name: "docs", url: "https://docs.example.com", method: 
 `skip` is evaluated synchronously on every request and reports the check as
 `skipped` without running it — use it for optional dependencies that are not
 configured in every environment.
+
+## Server metadata
+
+The hosting packages answer a different question from the probes: not "is the
+database up" but "which replica is telling me that". Each reads its platform's
+own environment — or, on Workers, the request — and renders it under `server`
+through the same `extend` hook:
+
+```ts
+import { healthRoute } from "@openstatus/health-hono";
+import { flyExtend } from "@openstatus/health-fly";
+
+app.route("/", healthRoute({ probes, extend: flyExtend() }));
+```
+
+```json
+{
+  "status": "ok",
+  "checkedAt": "2026-09-11T12:00:00.000Z",
+  "latencyMs": 41,
+  "checks": [{ "name": "database", "status": "ok", "critical": true, "latencyMs": 3 }],
+  "server": {
+    "platform": "fly",
+    "region": "ams",
+    "instanceId": "148e21ebd47089",
+    "service": "openstatus-api",
+    "version": "registry.fly.io/openstatus-api:deployment-01H9RK9EYO9PGNBYAKGXSHV0PH",
+    "primaryRegion": "cdg"
+  }
+}
+```
+
+`platform`, `region`, `instanceId`, `service`, `version` and `environment` mean
+the same thing on every platform; anything else is named as that platform names
+it. A field is absent rather than guessed when the platform has no equivalent —
+Vercel exposes no instance identity, so there is no `instanceId` there. Values
+are passed through exactly as the platform sets them, so `region` is `ams` on
+Fly and `DFW` on Cloudflare.
+
+Each package also exports the data on its own — `flyServer()`, `vercelServer()`
+— so you can compose it with your own fields, or chain platforms if one build
+deploys to several:
+
+```ts
+extend: (_report, c) => ({
+  server: flyServer() ?? vercelServer(),
+  requestId: c.get("requestId"),
+}),
+```
+
+Off-platform they return `undefined` and nothing is rendered, so the same build
+runs unchanged on your laptop. Note that `extend` output is included even when
+`exposeChecks` is `false`: if `/health` is public, serve the detailed body on a
+second, internal route instead.
 
 ## Development
 

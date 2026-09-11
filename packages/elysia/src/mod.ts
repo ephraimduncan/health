@@ -24,10 +24,10 @@ export function health(options: ElysiaHealthOptions): Elysia {
     head: boolean,
   ): Promise<Response> => {
     const report = await check.report();
-    const extra = options.extend == null
+    const extended = options.extend == null
       ? {}
       : await options.extend(report, ctx);
-    const rendered = renderHealthResponse(report, options, extra);
+    const rendered = renderHealthResponse(report, options, extended);
     return new Response(head ? null : JSON.stringify(rendered.body), {
       status: rendered.status,
       headers: rendered.headers,

@@ -19,7 +19,7 @@ npm install @openstatus/health
 ## Usage
 
 ```ts
-import { createHealthHandler, httpProbe } from "@openstatus/health";
+import { createHealthHandler, httpProbe, readEnv } from "@openstatus/health";
 
 const handler = createHealthHandler({
   probes: [
@@ -30,7 +30,7 @@ const handler = createHealthHandler({
     },
     {
       name: "redis",
-      skip: () => !Deno.env.get("UPSTASH_REDIS_REST_URL"),
+      skip: () => readEnv("UPSTASH_REDIS_REST_URL") == null,
       run: () => redis.ping(),
     },
     httpProbe({ name: "unkey", url: "https://api.unkey.com/v2/liveness" }),
@@ -69,6 +69,12 @@ interface Probe {
 }
 ```
 
+`readEnv(name, source?)` reads one variable through `process.env` under Node,
+Bun, Deno and Workers with `nodejs_compat`, and answers `undefined` instead of
+throwing where env access is denied — Deno without `--allow-env` throws on both
+`process.env` and `Deno.env.get`. Pass `source` to supply the values yourself,
+which is how tests avoid mutating the environment.
+
 A probe is healthy when `run` resolves and failed when it rejects or throws.
 The `signal` aborts when `timeoutMs` elapses; pass it to `fetch` and other
 cancellable calls.
@@ -105,4 +111,5 @@ Every adapter accepts the same `HealthEndpointOptions`:
 - `expectOk(response, expectStatus?)` — rejects unless the response is 2xx (or the given status).
 - `runProbes(probes, { timeoutMs?, formatError? })` — one round, no caching.
 - `createHealthCheck(options)` — `{ report(), invalidate() }` with caching and in-flight de-duplication.
-- `renderHealthResponse(report, options, extra?)` — `{ status, headers, body }` for custom adapters.
+- `renderHealthResponse(report, options, extended?)` — `{ status, headers, body }` for custom adapters.
+- `readEnv(name, source?)` — portable environment lookup that never throws.

@@ -17,6 +17,7 @@ export type {
   ProbeResult,
 } from "./types.ts";
 export { DuplicateProbeError, ProbeTimeoutError } from "./errors.ts";
+export { readEnv } from "./env.ts";
 export { defaultTimeoutMs, runProbes, type RunProbesOptions } from "./run.ts";
 export { createHealthCheck, defaultCacheMs } from "./check.ts";
 export {

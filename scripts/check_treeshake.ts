@@ -16,6 +16,14 @@ const targets: Record<string, Target> = {
     allowed: ["express"],
   },
   "@openstatus/health-next": { symbol: "healthRoute", allowed: [] },
+  "@openstatus/health-fly": { symbol: "flyExtend", allowed: [] },
+  "@openstatus/health-koyeb": { symbol: "koyebExtend", allowed: [] },
+  "@openstatus/health-railway": { symbol: "railwayExtend", allowed: [] },
+  "@openstatus/health-vercel": { symbol: "vercelExtend", allowed: [] },
+  "@openstatus/health-cloudflare": {
+    symbol: "cloudflareExtend",
+    allowed: [],
+  },
   "@openstatus/health-tinybird": { symbol: "tinybirdProbe", allowed: [] },
   "@openstatus/health-drizzle": {
     symbol: "drizzleProbe",

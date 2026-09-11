@@ -17,8 +17,10 @@ export function healthRoute(options: HonoHealthOptions): Hono {
 
   const respond = async (c: Context, head: boolean): Promise<Response> => {
     const report = await check.report();
-    const extra = options.extend == null ? {} : await options.extend(report, c);
-    const rendered = renderHealthResponse(report, options, extra);
+    const extended = options.extend == null
+      ? {}
+      : await options.extend(report, c);
+    const rendered = renderHealthResponse(report, options, extended);
     return new Response(head ? null : JSON.stringify(rendered.body), {
       status: rendered.status,
       headers: rendered.headers,

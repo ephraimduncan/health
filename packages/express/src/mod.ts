@@ -37,10 +37,10 @@ export function healthRouter(options: ExpressHealthOptions): Router {
     head: boolean,
   ): Promise<void> => {
     const report = await check.report();
-    const extra = options.extend == null
+    const extended = options.extend == null
       ? {}
       : await options.extend(report, req);
-    const rendered = renderHealthResponse(report, options, extra);
+    const rendered = renderHealthResponse(report, options, extended);
     res.status(rendered.status).set({ ...rendered.headers });
     if (head) res.end();
     else res.send(JSON.stringify(rendered.body));

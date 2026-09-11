@@ -31,18 +31,18 @@ export function statusCodeFor<Ctx>(
 export function renderHealthResponse<Ctx>(
   report: HealthReport,
   options: HealthEndpointOptions<Ctx>,
-  extra: JsonObject = {},
+  extended: JsonObject = {},
 ): HealthHttpResponse {
   const exposeChecks = options.exposeChecks ?? true;
   const body: HealthResponseBody = exposeChecks
     ? {
-      ...extra,
+      ...extended,
       status: report.status,
       checkedAt: report.checkedAt,
       latencyMs: report.latencyMs,
       checks: report.checks,
     }
-    : { ...extra, status: report.status, checkedAt: report.checkedAt };
+    : { ...extended, status: report.status, checkedAt: report.checkedAt };
   return {
     status: statusCodeFor(report, options),
     headers: healthHeaders,

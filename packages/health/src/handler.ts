@@ -18,10 +18,10 @@ export function createHealthHandler<Req extends Request = Request>(
       });
     }
     const report = await check.report();
-    const extra = options.extend == null
+    const extended = options.extend == null
       ? {}
       : await options.extend(report, request);
-    const rendered = renderHealthResponse(report, options, extra);
+    const rendered = renderHealthResponse(report, options, extended);
     return new Response(
       request.method === "HEAD" ? null : JSON.stringify(rendered.body),
       { status: rendered.status, headers: rendered.headers },
