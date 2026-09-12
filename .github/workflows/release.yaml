@@ -81,7 +81,7 @@ jobs:
               echo "::notice::$name@$version is already on npm, skipping"
               return
             fi
-            (cd "$dir" && npm publish --access public --ignore-scripts --provenance)
+            (cd "$dir" && npm publish --access public --ignore-scripts --provenance --loglevel verbose)
           }
           publish ./packages/health
           for dir in ./packages/*/; do
