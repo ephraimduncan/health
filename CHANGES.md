@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.1
+
+- New `@openstatus/health-tanstack-start` adapter: `healthRoute()` returns
+  `{ GET, HEAD }` for a file route's `server.handlers`; `healthHandler()` is
+  the bare handler for use with `createHandlers` when a method needs its own
+  middleware. `extend()` receives the Start handler context
+  (`{ request, params, context }`), generic over the router context type.
+- `@openstatus/health-drizzle`: `drizzleProbe()` called `db.execute` / `db.run`
+  detached from the drizzle instance, so every check failed with
+  `Cannot read properties of undefined (reading 'resultKind')`. Both the
+  pg/mysql and sqlite/libsql paths are fixed and covered by regression tests
+  (#1).
+- Every package moves to 0.1.1; adapters and probes now declare
+  `@openstatus/health` as a peer at `^0.1.1`.
+
 ## 0.1.0
 
 Initial release.
