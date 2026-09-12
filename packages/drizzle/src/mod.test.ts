@@ -59,7 +59,11 @@ test("drizzleProbe() reports unhealthy on a rejection", async () => {
 test("drizzleProbe() throws at construction on an unsupported instance", () => {
   assert.throws(
     () => drizzleProbe({ db: {} }),
-    /unsupported drizzle instance/,
+    /drizzleProbe: "db" must expose execute\(\) or run\(\), got an object with no keys/,
+  );
+  assert.throws(
+    () => drizzleProbe({ db: { query: 1 } as DrizzleLikeDb }),
+    /got an object with keys query/,
   );
 });
 

@@ -20,3 +20,14 @@ test("assertUniqueProbeNames() throws on duplicates", () => {
     (e: Error) => e instanceof DuplicateProbeError && e.probeName === "a",
   );
 });
+
+test("DuplicateProbeError suggests the fix", () => {
+  assert.throws(
+    () =>
+      assertUniqueProbeNames([
+        { name: "database", run: () => {} },
+        { name: "database", run: () => {} },
+      ]),
+    /duplicate probe name "database": pass a different `name` to one of the probes/,
+  );
+});

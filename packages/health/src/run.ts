@@ -43,7 +43,10 @@ async function runProbe(
   const ctx: ProbeContext = {
     name: probe.name,
     critical: probe.critical ?? false,
-    timeoutMs: probe.timeoutMs ?? options.timeoutMs ?? defaultTimeoutMs,
+    timeoutMs: Math.min(
+      probe.timeoutMs ?? options.timeoutMs ?? defaultTimeoutMs,
+      options.deadlineMs ?? Infinity,
+    ),
   };
   const { name, critical, timeoutMs } = ctx;
   const formatError = resolveFormatError(options.formatError);

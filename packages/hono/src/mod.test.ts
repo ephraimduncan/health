@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Hono } from "hono";
-import { DuplicateProbeError, type Probe } from "@openstatus/health";
+import { type Env, Hono } from "hono";
+import {
+  createHealthCheck,
+  DuplicateProbeError,
+  type Probe,
+} from "@openstatus/health";
 import { healthHandler, healthRoute } from "./mod.ts";
 
 const ok: Probe = { name: "a", run: () => {} };
@@ -13,7 +17,7 @@ const bad: Probe = {
   },
 };
 
-function app(route: Hono): Hono {
+function app<E extends Env>(route: Hono<E>): Hono {
   return new Hono().route("/", route);
 }
 
@@ -89,4 +93,81 @@ test("healthHandler() mounts on a plain route and answers GET and HEAD", async (
   const head = await a.request("/health", { method: "HEAD" });
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
+});
+
+test("healthHandler() types the context from the app's Env", async () => {
+  type Env = { Variables: { requestId: string } };
+  const a = new Hono<Env>();
+  a.use(async (c, next) => {
+    c.set("requestId", "r2");
+    await next();
+  });
+  a.on(
+    ["GET", "HEAD"],
+    "/health",
+    healthHandler<Env>({
+      probes: [ok],
+      extend: (_report, c) => {
+        const id: string = c.get("requestId");
+        return { requestId: id };
+      },
+    }),
+  );
+  a.route("/", healthRoute<Env>({ probes: [ok], path: "/h2" }));
+  const res = await a.request("/health");
+  assert.equal((await res.json()).requestId, "r2");
+});
+
+test("healthRoute() shares a prebuilt check between two routes", async () => {
+  let calls = 0;
+  const check = createHealthCheck({
+    probes: [{
+      name: "a",
+      run: () => {
+        calls++;
+      },
+    }],
+    cacheMs: 1000,
+  });
+  const a = new Hono()
+    .route("/", healthRoute({ check, exposeChecks: false }))
+    .route("/", healthRoute({ check, path: "/_health" }));
+  const pub = await (await a.request("/health")).json();
+  const ops = await (await a.request("/_health")).json();
+  assert.equal(calls, 1);
+  assert.equal(pub.checks, undefined);
+  assert.equal(ops.checks.length, 1);
+});
+
+test("healthRoute() gates checks and extend per request", async () => {
+  const a = app(healthRoute({
+    probes: [ok],
+    exposeChecks: (c) => c.req.header("x-health-token") === "s3cret",
+    extend: () => ({ region: "fra" }),
+  }));
+  const anonymous = await (await a.request("/health")).json();
+  assert.equal(anonymous.checks, undefined);
+  assert.equal(anonymous.region, undefined);
+  const trusted = await (await a.request("/health", {
+    headers: { "x-health-token": "s3cret" },
+  })).json();
+  assert.equal(trusted.checks.length, 1);
+  assert.equal(trusted.region, "fra");
+});
+
+test("healthRoute() still answers when extend throws", async () => {
+  const errors: string[] = [];
+  const a = app(healthRoute({
+    probes: [ok],
+    extend: () => {
+      throw new Error("boom");
+    },
+    onError: (error) => {
+      errors.push(error.message);
+    },
+  }));
+  const res = await a.request("/health");
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).status, "ok");
+  assert.deepEqual(errors, ["boom"]);
 });

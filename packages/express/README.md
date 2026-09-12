@@ -26,7 +26,19 @@ import { healthHandler } from "@openstatus/health-express";
 app.get("/health", requireInternalNetwork, healthHandler({ probes }));
 ```
 
-`extend` receives the full Express `Request` — `req.ip`, `req.query`,
-`req.get()` and anything middleware attached. Probe failures never reject the
-request; unexpected errors are forwarded to `next(err)`. Methods other than
+`extend` and a function-form `exposeChecks` receive the full Express
+`Request` — `req.ip`, `req.query`, `req.get()` and anything middleware
+attached. Pass the shape of `res.locals` as a type argument to have
+`req.res.locals` typed:
+
+```ts
+app.get("/health", healthHandler<{ user: User }>({
+  probes,
+  exposeChecks: (req) => req.res?.locals.user.role === "ops",
+}));
+```
+
+Pass `check` instead of `probes` to share one `createHealthCheck()` between
+routes. Probe failures never reject the request; an `extend` that throws is
+reported to `onError` and the report is served without it. Methods other than
 `GET` and `HEAD` fall through to Express's default `404`.

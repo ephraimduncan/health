@@ -1,5 +1,4 @@
-import { createHealthCheck } from "./check.ts";
-import { renderHealthResponse } from "./response.ts";
+import { createHealthResponder } from "./responder.ts";
 import type { HealthRouteOptions } from "./types.ts";
 
 export type HealthHandler<Req extends Request = Request> = (
@@ -14,27 +13,18 @@ export type LazyHealthHandler<Req extends Request = Request, Env = never> = (
 export function createHealthHandler<Req extends Request = Request>(
   options: HealthRouteOptions<Req>,
 ): HealthHandler<Req> {
-  const check = createHealthCheck(options);
+  const responder = createHealthResponder<Req>(options);
   const path = options.path;
-  return async (request: Req): Promise<Response> => {
+  return (request: Req): Promise<Response> => {
     if (path != null && !matchesPath(request.url, path)) {
-      return new Response(null, { status: 404 });
+      return Promise.resolve(new Response(null, { status: 404 }));
     }
     if (request.method !== "GET" && request.method !== "HEAD") {
-      return new Response(null, {
-        status: 405,
-        headers: { allow: "GET, HEAD" },
-      });
+      return Promise.resolve(
+        new Response(null, { status: 405, headers: { allow: "GET, HEAD" } }),
+      );
     }
-    const report = await check.report();
-    const extended = options.extend == null
-      ? {}
-      : await options.extend(report, request);
-    const rendered = renderHealthResponse(report, options, extended);
-    return new Response(
-      request.method === "HEAD" ? null : JSON.stringify(rendered.body),
-      { status: rendered.status, headers: rendered.headers },
-    );
+    return responder.toResponse(request, request.method);
   };
 }
 

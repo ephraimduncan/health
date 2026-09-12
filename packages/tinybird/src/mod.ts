@@ -1,4 +1,9 @@
-import { httpProbe, type Probe, type ProbeOverrides } from "@openstatus/health";
+import {
+  httpProbe,
+  type Probe,
+  type ProbeOverrides,
+  probeUrl,
+} from "@openstatus/health";
 
 export const tinybirdDefaultBaseUrl = "https://api.tinybird.co";
 export const tinybirdDefaultName = "tinybird";
@@ -9,10 +14,14 @@ export interface TinybirdProbeOptions extends ProbeOverrides {
 }
 
 export function tinybirdProbe(options: TinybirdProbeOptions = {}): Probe {
-  const baseUrl = new URL(options.baseUrl ?? tinybirdDefaultBaseUrl);
   return httpProbe({
     name: options.name ?? tinybirdDefaultName,
-    url: new URL("/v0/health", baseUrl),
+    url: probeUrl({
+      probe: "tinybirdProbe",
+      field: "baseUrl",
+      value: options.baseUrl ?? tinybirdDefaultBaseUrl,
+      path: "/v0/health",
+    }),
     critical: options.critical ?? false,
     timeoutMs: options.timeoutMs,
     skip: options.skip,

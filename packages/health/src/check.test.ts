@@ -160,3 +160,64 @@ test("createHealthCheck() accepts the formatError presets", async () => {
   }).report();
   assert.equal(message.checks[0].error, "boom");
 });
+
+test("createHealthCheck() serves a stale report while refreshing within staleMs", async () => {
+  const { probe, calls } = counting("a");
+  const check = createHealthCheck({
+    probes: [probe],
+    cacheMs: 20,
+    staleMs: 1000,
+  });
+  const first = await check.report();
+  await delay(30);
+  const started = performance.now();
+  const stale = await check.report();
+  assert.ok(performance.now() - started < 5);
+  assert.equal(stale, first);
+  await delay(15);
+  assert.equal(calls(), 2);
+  const fresh = await check.report();
+  assert.notEqual(fresh, first);
+});
+
+test("createHealthCheck() blocks once the stale window has passed", async () => {
+  const { probe, calls } = counting("a");
+  const check = createHealthCheck({
+    probes: [probe],
+    cacheMs: 10,
+    staleMs: 10,
+  });
+  const first = await check.report();
+  await delay(30);
+  const second = await check.report();
+  assert.notEqual(second, first);
+  assert.equal(calls(), 2);
+});
+
+test("createHealthCheck() forwards deadlineMs", async () => {
+  const check = createHealthCheck({
+    probes: [{
+      name: "a",
+      timeoutMs: 5000,
+      run: (signal) =>
+        new Promise<void>((_, reject) => {
+          signal.addEventListener("abort", () => reject(signal.reason));
+        }),
+    }],
+    deadlineMs: 10,
+  });
+  const report = await check.report();
+  assert.equal(report.checks[0].status, "timeout");
+  assert.ok(report.latencyMs < 1000);
+});
+
+test("createHealthCheck() accepts a prebuilt check through resolveHealthCheck", async () => {
+  const { resolveHealthCheck } = await import("./responder.ts");
+  const { probe, calls } = counting("a");
+  const check = createHealthCheck({ probes: [probe], cacheMs: 1000 });
+  assert.equal(resolveHealthCheck({ check }), check);
+  const built = resolveHealthCheck({ probes: [probe] });
+  assert.notEqual(built, check);
+  await built.report();
+  assert.equal(calls(), 1);
+});

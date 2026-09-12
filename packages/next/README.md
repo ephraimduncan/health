@@ -26,5 +26,6 @@ export const { GET, HEAD } = healthRoute({
 the route; `cacheMs` (default 5 s) is the only cache that should apply.
 
 The route path is the file location, so there is no `path` option. `extend`
-receives the `NextRequest`. `next` is a types-only peer dependency, so the
+and a function-form `exposeChecks` receive the `NextRequest`; pass `check`
+instead of `probes` to share one `createHealthCheck()` with another route. `next` is a types-only peer dependency, so the
 package has no runtime imports and works on the Edge runtime.

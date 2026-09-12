@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { expectOk, httpProbe, probe } from "./probes.ts";
+import { ProbeConfigError } from "./errors.ts";
+import { expectOk, httpProbe, probe, probeUrl } from "./probes.ts";
 import { runProbes } from "./run.ts";
 
 interface Call {
@@ -80,4 +81,45 @@ test("httpProbe() honours overrides", async () => {
 test("probe() returns its argument", () => {
   const p = { name: "a", run: () => {} };
   assert.equal(probe(p), p);
+});
+
+test("probeUrl() resolves a path against an absolute base", () => {
+  const url = probeUrl({
+    probe: "p",
+    field: "baseUrl",
+    value: "https://api.example.com/v1/",
+    path: "/health",
+  });
+  assert.equal(url.href, "https://api.example.com/health");
+  assert.equal(
+    probeUrl({ probe: "p", field: "url", value: new URL("http://x/y") }).href,
+    "http://x/y",
+  );
+});
+
+test("probeUrl() names the probe and field when the value is missing", () => {
+  assert.throws(
+    () => probeUrl({ probe: "upstashProbe", field: "url", value: undefined }),
+    (e: unknown) =>
+      e instanceof ProbeConfigError &&
+      e.probe === "upstashProbe" &&
+      e.field === "url" &&
+      e.message ===
+        'upstashProbe: "url" must be an absolute URL, got undefined',
+  );
+  assert.throws(
+    () => probeUrl({ probe: "p", field: "url", value: "" }),
+    /"url" must be an absolute URL, got ""/,
+  );
+  assert.throws(
+    () => probeUrl({ probe: "p", field: "url", value: "/relative" }),
+    /"url" must be an absolute URL, got "\/relative"/,
+  );
+});
+
+test("httpProbe() rejects a relative url at construction", () => {
+  assert.throws(
+    () => httpProbe({ name: "docs", url: "/docs" }),
+    /httpProbe\("docs"\): "url" must be an absolute URL/,
+  );
 });

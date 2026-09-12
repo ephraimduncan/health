@@ -2,12 +2,17 @@ import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import test from "node:test";
 import express from "express";
-import { DuplicateProbeError, type Probe } from "@openstatus/health";
+import {
+  createHealthCheck,
+  DuplicateProbeError,
+  type Probe,
+} from "@openstatus/health";
 import {
   type ExpressHealthOptions,
   healthHandler,
   healthRoute,
 } from "./mod.ts";
+import type { Express } from "express";
 
 const ok: Probe = { name: "a", run: () => {} };
 const bad: Probe = {
@@ -122,4 +127,86 @@ test("healthHandler() mounts on a plain route and sees the full request", async 
       server.close((e) => (e ? reject(e) : resolve()))
     );
   }
+});
+
+async function serve(
+  app: Express,
+  fn: (base: string) => Promise<void>,
+): Promise<void> {
+  const server: Server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (address == null || typeof address === "string") {
+    throw new Error("server has no TCP address");
+  }
+  try {
+    await fn(`http://127.0.0.1:${address.port}`);
+  } finally {
+    await new Promise<void>((resolve, reject) =>
+      server.close((e) => (e ? reject(e) : resolve()))
+    );
+  }
+}
+
+test("healthHandler() types res.locals from the Locals generic", async () => {
+  type Locals = { user: string };
+  const app = express();
+  app.use((_req, res, next) => {
+    res.locals.user = "ops";
+    next();
+  });
+  app.get(
+    "/health",
+    healthHandler<Locals>({
+      probes: [ok],
+      extend: (_report, req) => {
+        const user: string | undefined = req.res?.locals.user;
+        return { user };
+      },
+    }),
+  );
+  await serve(app, async (base) => {
+    const body = await (await fetch(`${base}/health`)).json();
+    assert.equal(body.user, "ops");
+  });
+});
+
+test("healthRoute() shares a prebuilt check and gates checks per request", async () => {
+  let calls = 0;
+  const check = createHealthCheck({
+    probes: [{
+      name: "a",
+      run: () => {
+        calls++;
+      },
+    }],
+    cacheMs: 1000,
+  });
+  const errors: string[] = [];
+  const app = express();
+  app.use(healthRoute({ check, exposeChecks: false }));
+  app.use(healthRoute({
+    check,
+    path: "/_health",
+    exposeChecks: (req) => req.get("x-health-token") === "s3cret",
+    extend: () => {
+      throw new Error("boom");
+    },
+    onError: (error) => {
+      errors.push(error.message);
+    },
+  }));
+  await serve(app, async (base) => {
+    const pub = await (await fetch(`${base}/health`)).json();
+    const anonymous = await (await fetch(`${base}/_health`)).json();
+    const trusted = await fetch(`${base}/_health`, {
+      headers: { "x-health-token": "s3cret" },
+    });
+    assert.equal(calls, 1);
+    assert.equal(pub.checks, undefined);
+    assert.equal(anonymous.checks, undefined);
+    assert.equal(trusted.status, 200);
+    assert.equal((await trusted.json()).checks.length, 1);
+    assert.deepEqual(errors, ["boom"]);
+  });
 });

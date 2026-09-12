@@ -14,9 +14,25 @@ export class DuplicateProbeError extends Error {
   readonly probeName: string;
 
   constructor(probeName: string) {
-    super(`duplicate probe name: ${JSON.stringify(probeName)}`);
+    super(
+      `duplicate probe name ${
+        JSON.stringify(probeName)
+      }: pass a different \`name\` to one of the probes`,
+    );
     this.name = "DuplicateProbeError";
     this.probeName = probeName;
+  }
+}
+
+export class ProbeConfigError extends Error {
+  readonly probe: string;
+  readonly field: string;
+
+  constructor(probe: string, field: string, reason: string) {
+    super(`${probe}: ${JSON.stringify(field)} ${reason}`);
+    this.name = "ProbeConfigError";
+    this.probe = probe;
+    this.field = field;
   }
 }
 

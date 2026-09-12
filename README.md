@@ -151,15 +151,54 @@ Deno.serve(createHealthHandler({ path: "/health", probes: [/* ... */] }));
 
 ## Options
 
-Every entry point takes the same options — `probes`, `path`, `cacheMs`,
-`timeoutMs`, `exposeChecks`, `unhealthyStatusCode`, `degradedStatusCode`,
-`extend`, `formatError`, `onReport` — documented once in
+Every entry point takes the same options — `probes` (or a shared `check`),
+`path`, `cacheMs`, `staleMs`, `timeoutMs`, `deadlineMs`, `exposeChecks`,
+`unhealthyStatusCode`, `degradedStatusCode`, `extend`, `formatError`,
+`onReport`, `onError` — documented once in
 [`packages/health`](packages/health#options).
 
 Aggregation: a failing or timed-out **critical** probe makes the report
 `unhealthy`; a failing non-critical probe makes it `degraded`; `skipped`
 probes never affect it. Errors are masked as `"failed"` unless you opt in
 with `formatError: "message"`.
+
+## Liveness, readiness, public and internal
+
+Liveness is "the process answers"; readiness is "the process can serve".
+Mount the same adapter twice — an empty probe list is always `ok`:
+
+```ts
+app.route("/", healthRoute({ path: "/livez", probes: [] }));
+app.route("/", healthRoute({ path: "/readyz", probes, deadlineMs: 800, cacheFailuresMs: 0 }));
+```
+
+`deadlineMs` caps the whole round so a hung dependency cannot outlast a
+Kubernetes probe's `timeoutSeconds`; `cacheFailuresMs: 0` lets the next poll
+see a recovery immediately. Set `staleMs` to keep answering from the last
+report while a refresh runs in the background.
+
+One `/health` can serve the load balancer and your on-call engineer:
+`exposeChecks` takes a function of the request, and `extend` output is only
+rendered when checks are exposed. If you would rather serve two routes, build
+the check once and share it so the probes run once per cache window:
+
+```ts
+import { createHealthCheck } from "@openstatus/health";
+
+const check = createHealthCheck({ probes, cacheMs: 5000, onReport: log });
+
+app.route("/", healthRoute({ check, exposeChecks: false }));
+app.route("/", healthRoute({ check, path: "/_health", extend: flyExtend() }));
+// or, one route:
+app.route("/", healthRoute({
+  check,
+  exposeChecks: (c) => c.req.header("x-health-token") === env.HEALTH_TOKEN,
+  extend: flyExtend(),
+}));
+```
+
+`check.invalidate()` drops the cache — call it after a reconnect or a config
+reload.
 
 ## Probes
 
@@ -261,9 +300,8 @@ extend: (_report, c) => ({
 ```
 
 Off-platform they return `undefined` and nothing is rendered, so the same build
-runs unchanged on your laptop. Note that `extend` output is included even when
-`exposeChecks` is `false`: if `/health` is public, serve the detailed body on a
-second, internal route instead.
+runs unchanged on your laptop. `extend` follows `exposeChecks`: when the checks
+are hidden, so is everything `extend` adds.
 
 ## Development
 

@@ -12,8 +12,6 @@
   and `src/` with `mod.ts`, implementation files and one `*.test.ts` per file.
   `health` also exports `src/testing.ts` as `@openstatus/health/testing`;
   probe and adapter tests use its doubles instead of local copies.
-  `health` also exports `src/testing.ts` as `@openstatus/health/testing`;
-  probe and adapter tests use its doubles instead of local copies.
 - `examples/` are type-checked in CI and never published.
 - `scripts/` hold workspace maintenance scripts.
 
@@ -32,15 +30,19 @@
   mean or use a structural interface.
 - Explicit return types on every exported function (JSR rejects slow types).
 - Every server adapter exports `healthRoute(options)` (mounts `path`) and
-  `healthHandler(options)` (a bare handler for that framework). Options are
-  layered: `RunProbesOptions` ⊂ `HealthCheckOptions` ⊂ `HealthHandlerOptions`
-  ⊂ `HealthRouteOptions`; a function only accepts the layer it uses.
+  `healthHandler(options)` (a bare handler for that framework; Next.js has
+  only `healthRoute`, the file is the route). Adapters are built on
+  `createHealthResponder` from the core and contain no response logic of
+  their own. Options are layered: `RunProbesOptions` ⊂ `HealthCheckOptions`
+  ⊂ `HealthHandlerOptions` ⊂ `HealthRouteOptions`; a function only accepts
+  the layer it uses. From `HealthHandlerOptions` up, `check` may replace
+  `probes`.
+- Adapters are generic over the framework's context type (Hono `Env`,
+  Elysia singleton, Express locals) with a loose default, so untyped usage
+  compiles and typed usage catches typos.
 - Probes take a client or URL; they never read the environment themselves.
-- Every server adapter exports `healthRoute(options)` (mounts `path`) and
-  `healthHandler(options)` (a bare handler for that framework). Options are
-  layered: `RunProbesOptions` ⊂ `HealthCheckOptions` ⊂ `HealthHandlerOptions`
-  ⊂ `HealthRouteOptions`; a function only accepts the layer it uses.
-- Probes take a client or URL; they never read the environment themselves.
+  Factories validate their options at construction and throw
+  `ProbeConfigError` naming the probe and field; use `probeUrl()` for URLs.
 - No comments or JSDoc unless they explain something the code cannot.
 - Client libraries are imported with `import type` only. Runtime imports are
   limited to what is actually called.

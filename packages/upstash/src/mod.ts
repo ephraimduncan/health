@@ -1,4 +1,10 @@
-import { expectOk, type Probe, type ProbeOverrides } from "@openstatus/health";
+import {
+  expectOk,
+  type Probe,
+  ProbeConfigError,
+  type ProbeOverrides,
+  probeUrl,
+} from "@openstatus/health";
 
 export const upstashDefaultName = "redis";
 
@@ -10,7 +16,19 @@ export interface UpstashProbeOptions extends ProbeOverrides {
 
 export function upstashProbe(options: UpstashProbeOptions): Probe {
   const doFetch = options.fetch ?? globalThis.fetch;
-  const url = new URL("/ping", options.url);
+  const url = probeUrl({
+    probe: "upstashProbe",
+    field: "url",
+    value: options.url,
+    path: "/ping",
+  });
+  if (typeof options.token !== "string") {
+    throw new ProbeConfigError(
+      "upstashProbe",
+      "token",
+      `must be a string, got ${String(options.token)}`,
+    );
+  }
   const headers = { authorization: `Bearer ${options.token}` };
   return {
     name: options.name ?? upstashDefaultName,

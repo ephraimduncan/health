@@ -66,3 +66,10 @@ test("tinybirdProbe() honours name, critical and skip overrides", async () => {
   assert.equal(check.critical, true);
   assert.equal(check.status, "skipped");
 });
+
+test("tinybirdProbe() rejects a relative baseUrl at construction", () => {
+  assert.throws(
+    () => tinybirdProbe({ baseUrl: "api.example.com" }),
+    /tinybirdProbe: "baseUrl" must be an absolute URL, got "api.example.com"/,
+  );
+});

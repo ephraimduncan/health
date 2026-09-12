@@ -66,3 +66,10 @@ test("unkeyProbe() honours name, critical and skip overrides", async () => {
   assert.equal(check.critical, true);
   assert.equal(check.status, "skipped");
 });
+
+test("unkeyProbe() rejects a relative baseUrl at construction", () => {
+  assert.throws(
+    () => unkeyProbe({ baseUrl: "api.example.com" }),
+    /unkeyProbe: "baseUrl" must be an absolute URL, got "api.example.com"/,
+  );
+});

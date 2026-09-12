@@ -1,5 +1,10 @@
 import { type SQL, sql } from "drizzle-orm";
-import type { Probe, ProbeOverrides, ProbeResult } from "@openstatus/health";
+import {
+  type Probe,
+  ProbeConfigError,
+  type ProbeOverrides,
+  type ProbeResult,
+} from "@openstatus/health";
 
 export const drizzleDefaultName = "database";
 
@@ -23,7 +28,11 @@ export function drizzleProbe(options: DrizzleProbeOptions): Probe {
     const runFn = db.run;
     run = () => runFn(query);
   } else {
-    throw new Error("unsupported drizzle instance");
+    throw new ProbeConfigError(
+      "drizzleProbe",
+      "db",
+      `must expose execute() or run(), got ${describe(db)}`,
+    );
   }
   return {
     name: options.name ?? drizzleDefaultName,
@@ -34,4 +43,13 @@ export function drizzleProbe(options: DrizzleProbeOptions): Probe {
       await run();
     },
   };
+}
+
+function describe(db: DrizzleLikeDb): string {
+  if (db == null) return String(db);
+  if (typeof db !== "object") return typeof db;
+  const keys = Object.keys(db);
+  return keys.length === 0
+    ? "an object with no keys"
+    : `an object with keys ${keys.slice(0, 8).join(", ")}`;
 }

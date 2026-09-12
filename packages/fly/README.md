@@ -100,15 +100,15 @@ environment, which is how the tests avoid touching the real one.
 
 ## Public endpoints
 
-`extend` output is rendered even when `exposeChecks` is `false`. Region and
-machine id are not secrets, but they are not for anonymous callers either —
-serve two endpoints rather than one:
+`extend` output follows `exposeChecks`: when checks are hidden, `server` is
+hidden too, so a public `/health` never leaks the machine id. To serve both
+audiences from one route, gate on the request; to serve two routes, share one
+check so the probes run once:
 
 ```ts
-app.route("/", healthRoute({ probes, exposeChecks: false }));
 app.route("/", healthRoute({
   probes,
-  path: "/internal/health",
+  exposeChecks: (c) => c.req.header("x-health-token") === env.HEALTH_TOKEN,
   extend: flyExtend(),
 }));
 ```

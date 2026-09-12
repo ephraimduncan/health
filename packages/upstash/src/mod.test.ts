@@ -64,3 +64,18 @@ test("upstashProbe() honours overrides", async () => {
   assert.equal(report.status, "unhealthy");
   assert.equal(report.checks[0].name, "cache");
 });
+
+test("upstashProbe() names the missing option at construction", () => {
+  assert.throws(
+    () => upstashProbe({ url: undefined as unknown as string, token: "t" }),
+    /upstashProbe: "url" must be an absolute URL, got undefined/,
+  );
+  assert.throws(
+    () =>
+      upstashProbe({
+        url: "https://x.upstash.io",
+        token: undefined as unknown as string,
+      }),
+    /upstashProbe: "token" must be a string, got undefined/,
+  );
+});

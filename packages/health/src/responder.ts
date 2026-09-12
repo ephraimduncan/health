@@ -1,0 +1,82 @@
+import { createHealthCheck } from "./check.ts";
+import { toError } from "./errors.ts";
+import { renderHealthResponse } from "./response.ts";
+import type {
+  HealthCheck,
+  HealthHandlerOptions,
+  HealthHttpResponse,
+  HealthReport,
+  HealthResponder,
+  HealthSource,
+} from "./types.ts";
+
+export function resolveHealthCheck(source: HealthSource): HealthCheck {
+  if (source.check != null) return source.check;
+  return createHealthCheck(source);
+}
+
+export function createHealthResponder<Ctx = Request>(
+  options: HealthHandlerOptions<Ctx>,
+): HealthResponder<Ctx> {
+  const check = resolveHealthCheck(options);
+  const fail = (error: Error, ctx: Ctx): void => {
+    if (options.onError == null) {
+      console.error("[@openstatus/health]", error);
+      return;
+    }
+    try {
+      options.onError(error, ctx);
+    } catch {
+      return;
+    }
+  };
+
+  const exposed = async (ctx: Ctx): Promise<boolean> => {
+    const option = options.exposeChecks ?? true;
+    if (typeof option === "boolean") return option;
+    try {
+      return await option(ctx);
+    } catch (e) {
+      fail(toError(e), ctx);
+      return false;
+    }
+  };
+
+  const extended = async (report: HealthReport, ctx: Ctx): Promise<object> => {
+    if (options.extend == null) return {};
+    try {
+      return await options.extend(report, ctx);
+    } catch (e) {
+      fail(toError(e), ctx);
+      return {};
+    }
+  };
+
+  const respond = async (ctx: Ctx): Promise<HealthHttpResponse> => {
+    const [current, exposeChecks] = await Promise.all([
+      check.report(),
+      exposed(ctx),
+    ]);
+    return renderHealthResponse(
+      current,
+      {
+        exposeChecks,
+        unhealthyStatusCode: options.unhealthyStatusCode,
+        degradedStatusCode: options.degradedStatusCode,
+      },
+      exposeChecks ? await extended(current, ctx) : {},
+    );
+  };
+
+  return {
+    check,
+    respond,
+    async toResponse(ctx: Ctx, method = "GET"): Promise<Response> {
+      const rendered = await respond(ctx);
+      return new Response(
+        method === "HEAD" ? null : JSON.stringify(rendered.body),
+        { status: rendered.status, headers: rendered.headers },
+      );
+    },
+  };
+}

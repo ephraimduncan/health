@@ -1,35 +1,40 @@
-import type { Context } from "elysia";
+import type { Context, RouteSchema, SingletonBase } from "elysia";
 import { Elysia } from "elysia";
 import {
-  createHealthCheck,
+  createHealthResponder,
   type HealthHandlerOptions,
   type HealthRouteOptions,
-  renderHealthResponse,
 } from "@openstatus/health";
 
-export type ElysiaHealthOptions = HealthRouteOptions<Context>;
+export type ElysiaBlankSingleton = {
+  decorator: Record<never, never>;
+  store: Record<never, never>;
+  derive: Record<never, never>;
+  resolve: Record<never, never>;
+};
 
-export type ElysiaHealthHandlerOptions = HealthHandlerOptions<Context>;
+export type ElysiaHealthContext<
+  S extends SingletonBase = ElysiaBlankSingleton,
+> = Context<RouteSchema, S>;
 
-export type ElysiaHealthHandler = (ctx: Context) => Promise<Response>;
+export type ElysiaHealthOptions = HealthRouteOptions<ElysiaHealthContext>;
+
+export type ElysiaHealthHandlerOptions<
+  S extends SingletonBase = ElysiaBlankSingleton,
+> = HealthHandlerOptions<ElysiaHealthContext<S>>;
+
+export type ElysiaHealthHandler<
+  S extends SingletonBase = ElysiaBlankSingleton,
+> = (ctx: ElysiaHealthContext<S>) => Promise<Response>;
 
 export const defaultPath = "/health";
 
-export function healthHandler(
-  options: ElysiaHealthHandlerOptions,
-): ElysiaHealthHandler {
-  const check = createHealthCheck(options);
-  return async (ctx: Context): Promise<Response> => {
-    const report = await check.report();
-    const extended = options.extend == null
-      ? {}
-      : await options.extend(report, ctx);
-    const rendered = renderHealthResponse(report, options, extended);
-    return new Response(
-      ctx.request.method === "HEAD" ? null : JSON.stringify(rendered.body),
-      { status: rendered.status, headers: rendered.headers },
-    );
-  };
+export function healthHandler<S extends SingletonBase = ElysiaBlankSingleton>(
+  options: ElysiaHealthHandlerOptions<S>,
+): ElysiaHealthHandler<S> {
+  const responder = createHealthResponder<ElysiaHealthContext<S>>(options);
+  return (ctx: ElysiaHealthContext<S>): Promise<Response> =>
+    responder.toResponse(ctx, ctx.request.method);
 }
 
 export function healthRoute(options: ElysiaHealthOptions): Elysia {

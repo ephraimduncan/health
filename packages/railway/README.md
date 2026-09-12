@@ -80,14 +80,14 @@ process environment.
 
 ## Public endpoints
 
-`extend` output renders even when `exposeChecks` is `false`. Serve two
-endpoints rather than exposing the replica id to anonymous callers:
+`extend` output follows `exposeChecks`: when checks are hidden, `server` is
+hidden too, so the replica id is never shown to anonymous callers. One route
+can serve both audiences by gating on the request:
 
 ```ts
-app.use(healthRouter({ probes, exposeChecks: false }));
-app.use(healthRouter({
+app.use(healthRoute({
   probes,
-  path: "/internal/health",
+  exposeChecks: (req) => req.get("x-health-token") === env.HEALTH_TOKEN,
   extend: railwayExtend(),
 }));
 ```

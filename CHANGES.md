@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased
+
+- `@openstatus/health`: `createHealthResponder(options)` — `{ check,
+  respond(ctx), toResponse(ctx, method?) }` — is the single implementation
+  every adapter now sits on, and the way to write one for another framework.
+  `HealthHandlerOptions` accepts a prebuilt `check` instead of `probes`, so
+  two routes can share one cache and callers keep a handle to
+  `invalidate()`. `exposeChecks` may be a function of the framework context,
+  and `extend` output now follows it: nothing from `extend` is rendered when
+  checks are hidden. An `extend` or `exposeChecks` that throws no longer
+  takes the endpoint down — the report is served without the extension (or
+  with checks hidden) and the error goes to the new `onError` hook, which
+  defaults to `console.error`. New `deadlineMs` caps every probe's timeout so
+  a round finishes inside a prober's own timeout; new `staleMs` serves the
+  last report while a refresh runs in the background. `probeUrl()` and
+  `ProbeConfigError` give probe factories construction-time errors that name
+  the probe and the field; `DuplicateProbeError` now suggests the fix.
+- `@openstatus/health-hono`, `@openstatus/health-elysia`,
+  `@openstatus/health-express`: `healthHandler` (and `healthRoute` on Hono)
+  take the framework's context type — `Env`, singleton, `res.locals` — so
+  `extend` and `exposeChecks` are typed like the rest of the app. Without a
+  type argument the context is loosely typed and existing code compiles
+  unchanged.
+- `@openstatus/health-upstash`, `-tinybird`, `-unkey`, `-drizzle`: a missing
+  or relative URL and an unsupported drizzle instance throw
+  `ProbeConfigError` at construction with the probe and field named, instead
+  of `Invalid URL` or `unsupported drizzle instance`.
+- README: liveness/readiness, Kubernetes and load-balancer timeouts, public
+  vs. internal bodies, and custom adapters are documented.
+
 ## 0.1.0
 
 Initial release.

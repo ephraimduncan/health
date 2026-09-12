@@ -128,28 +128,33 @@ The options are layered so that each function only accepts what it uses:
 
 | Type | Accepted by | Adds |
 | ---- | ----------- | ---- |
-| `RunProbesOptions` | `runProbes()` | `timeoutMs`, `formatError` |
-| `HealthCheckOptions` | `createHealthCheck()` | `probes`, `cacheMs`, `cacheFailuresMs`, `onReport` |
-| `HealthResponseOptions` | `renderHealthResponse()` | `exposeChecks`, `unhealthyStatusCode`, `degradedStatusCode` |
-| `HealthHandlerOptions<Ctx>` | `createHealthHandler()`, adapter `healthHandler()` | `extend` |
+| `RunProbesOptions` | `runProbes()` | `timeoutMs`, `deadlineMs`, `formatError` |
+| `HealthCheckOptions` | `createHealthCheck()` | `probes`, `cacheMs`, `cacheFailuresMs`, `staleMs`, `onReport` |
+| `HealthResponseOptions` | `renderHealthResponse()` | `exposeChecks` (boolean), `unhealthyStatusCode`, `degradedStatusCode` |
+| `HealthHandlerOptions<Ctx>` | `createHealthResponder()`, `createHealthHandler()`, adapter `healthHandler()` | `check` (instead of `probes`), `exposeChecks` (boolean or function), `extend`, `onError` |
 | `HealthRouteOptions<Ctx>` | `createHealthHandler()`, adapter `healthRoute()` | `path` |
 
 Each type extends the one above it, so an object typed as
-`HealthRouteOptions` works everywhere.
+`HealthRouteOptions` works everywhere. From `HealthHandlerOptions` up, you
+pass either `probes` (and the check options) or a prebuilt `check`.
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
 | `probes` | — | Probes to run, concurrently, on every uncached request. |
+| `check` | — | A `HealthCheck` from `createHealthCheck()` to use instead of `probes`. Share one between routes so the probes run once per cache window, and keep a handle to `invalidate()`. |
 | `path` | `"/health"` | Route the adapter mounts. On `createHealthHandler` there is no default: unset answers every URL, set returns `404` elsewhere. Ignored by Next.js, where the file is the route. |
 | `cacheMs` | `5000` | Reuse the last `ok` report for this long; concurrent callers share one round. `0` disables. |
 | `cacheFailuresMs` | `cacheMs` | Same, for `degraded` and `unhealthy` reports. Set `0` so a readiness poller sees recovery on its next tick instead of waiting out the cache. |
+| `staleMs` | `0` | Stale-while-revalidate: after the cache expires, keep answering with the last report for this long while one refresh runs in the background. The prober never waits on a probe. |
 | `timeoutMs` | `5000` | Default per-probe timeout; a hung probe reports `timeout`. |
-| `exposeChecks` | `true` | Include `latencyMs` and `checks` in the body. `false` returns only `status` and `checkedAt` — for public endpoints. |
+| `deadlineMs` | — | Upper bound for the whole round: every probe's timeout is capped to it, so the response is ready within `deadlineMs` no matter what hangs. Set it below your prober's own timeout — Kubernetes defaults to `1s`. |
+| `exposeChecks` | `true` | Include `latencyMs`, `checks` and `extend` output in the body. `false` returns only `status` and `checkedAt` — for public endpoints. A function `(ctx) => boolean \| Promise<boolean>` decides per request, so one route can be terse for anonymous callers and detailed for trusted ones. |
 | `unhealthyStatusCode` | `503` | HTTP status for `unhealthy`. Set `200` to always answer 200 and let callers read `status`. |
 | `degradedStatusCode` | `200` | HTTP status for `degraded`. |
-| `extend` | — | `(report, ctx) => object` merged into the body: request id, vitals, or a `server` object from a hosting package. `ctx` is the framework request context. Anything `JSON.stringify` accepts is fine — `interface` types and `Date`s included. `status`, `checkedAt`, `latencyMs` and `checks` always win; put your data under your own keys. |
+| `extend` | — | `(report, ctx) => object` merged into the body: request id, vitals, or a `server` object from a hosting package. `ctx` is the framework request context. Anything `JSON.stringify` accepts is fine — `interface` types and `Date`s included. `status`, `checkedAt`, `latencyMs` and `checks` always win; put your data under your own keys. Only runs when checks are exposed. If it throws, the report is served without it and the error goes to `onError`. |
 | `formatError` | `"generic"` | What goes in a check's `error` field. `"generic"` reports `"failed"` / `"timed out after Nms"` and never leaks messages. `"message"` reports `error.message`. Or supply `(error: Error) => string`. |
 | `onReport` | — | `(report) => void` called once per uncached round, after the probes finish. Log it, emit a metric, page on `unhealthy`. Errors thrown or rejected inside are swallowed. |
+| `onError` | `console.error` | `(error, ctx) => void` called when `extend` or a function-form `exposeChecks` throws. The endpoint still answers — with no extension, or with checks hidden. |
 
 ## Helpers
 
@@ -158,7 +163,9 @@ Each type extends the one above it, so an object typed as
 - `probe(options)` — identity function for authoring probes with inference.
 - `runProbes(probes, { timeoutMs?, formatError? })` — one round, no caching.
 - `createHealthCheck(options)` — `{ report(), invalidate() }` with caching and in-flight de-duplication.
-- `renderHealthResponse(report, options, extended?)` — `{ status, headers, body }` for custom adapters.
+- `renderHealthResponse(report, options, extended?)` — `{ status, headers, body }` from a report you already have.
+- `createHealthResponder<Ctx>(options)` — `{ check, respond(ctx), toResponse(ctx, method?) }`: everything between "a request arrived" and "here is the response", for any framework. `respond` returns `{ status, headers, body }`; `toResponse` builds a `Response` and drops the body on `HEAD`. This is what every adapter is built on — see [Custom adapters](#custom-adapters).
+- `resolveHealthCheck(options)` — the `check` you passed, or one built from `probes`.
 - `createHealthHandler(options)` — `(request: Request) => Promise<Response>`.
 - `createLazyHealthHandler((env, request) => options)` — the same handler, built once on the first request. For runtimes where configuration only exists per request, such as Cloudflare Workers' `fetch(request, env)`:
 
@@ -171,6 +178,31 @@ Each type extends the one above it, so an object typed as
   ```
 
 - `readEnv(name, source?)` — portable environment lookup that never throws.
+- `probeUrl({ probe, field, value, path? })` — parse a URL option at construction and throw a `ProbeConfigError` that names the probe and the field (`upstashProbe: "url" must be an absolute URL, got undefined`) instead of a bare `Invalid URL` from inside the library. Use it in your own probe factories.
+
+## Custom adapters
+
+An adapter for a framework not listed here is a few lines over
+`createHealthResponder`. Give it the framework's request context as `Ctx` so
+`extend` and `exposeChecks` receive it typed:
+
+```ts
+import { createHealthResponder, type HealthHandlerOptions } from "@openstatus/health";
+import type { FastifyReply, FastifyRequest } from "fastify";
+
+export function healthHandler(options: HealthHandlerOptions<FastifyRequest>) {
+  const responder = createHealthResponder<FastifyRequest>(options);
+  return async (req: FastifyRequest, reply: FastifyReply) => {
+    const { status, headers, body } = await responder.respond(req);
+    reply.status(status).headers(headers);
+    return req.method === "HEAD" ? reply.send() : reply.send(JSON.stringify(body));
+  };
+}
+```
+
+Frameworks that already speak `(Request) => Response` — SvelteKit `+server.ts`,
+Astro endpoints, React Router resource routes, Nitro, Fresh, `Bun.serve` —
+need no adapter: `export const GET = createHealthHandler({ probes })`.
 
 ## Testing
 

@@ -13,33 +13,42 @@ export function createHealthCheck(options: HealthCheckOptions): HealthCheck {
   assertUniqueProbeNames(options.probes);
   const cacheMs = options.cacheMs ?? defaultCacheMs;
   const cacheFailuresMs = options.cacheFailuresMs ?? cacheMs;
+  const staleMs = options.staleMs ?? 0;
   let cached:
     | { readonly at: number; readonly report: HealthReport }
     | undefined;
   let pending: Promise<HealthReport> | undefined;
 
+  const refresh = (): Promise<HealthReport> => {
+    if (pending != null) return pending;
+    pending = runProbes(options.probes, {
+      timeoutMs: options.timeoutMs,
+      deadlineMs: options.deadlineMs,
+      formatError: options.formatError,
+    })
+      .then((report) => {
+        cached = { at: Date.now(), report };
+        notify(options.onReport, report);
+        return report;
+      })
+      .finally(() => {
+        pending = undefined;
+      });
+    return pending;
+  };
+
   return {
     report(): Promise<HealthReport> {
       if (cached != null) {
+        const age = Date.now() - cached.at;
         const ttl = cached.report.status === "ok" ? cacheMs : cacheFailuresMs;
-        if (Date.now() - cached.at < ttl) {
+        if (age < ttl) return Promise.resolve(cached.report);
+        if (age < ttl + staleMs) {
+          refresh().catch(() => {});
           return Promise.resolve(cached.report);
         }
       }
-      if (pending != null) return pending;
-      pending = runProbes(options.probes, {
-        timeoutMs: options.timeoutMs,
-        formatError: options.formatError,
-      })
-        .then((report) => {
-          cached = { at: Date.now(), report };
-          notify(options.onReport, report);
-          return report;
-        })
-        .finally(() => {
-          pending = undefined;
-        });
-      return pending;
+      return refresh();
     },
     invalidate(): void {
       cached = undefined;

@@ -40,6 +40,23 @@ import { healthHandler } from "@openstatus/health-hono";
 app.on(["GET", "HEAD"], "/health", auth, healthHandler({ probes }));
 ```
 
-`extend` receives the Hono `Context` as its second argument. Methods other
-than `GET` and `HEAD` are not registered and fall through to your app's
-`notFound`. All other options are documented in `@openstatus/health`.
+`extend` and a function-form `exposeChecks` receive the Hono `Context`.
+Without a type argument the context is loosely typed — `c.get(key)` and
+`c.env` are `unknown`. Pass your app's `Env` to get the same types as your
+routes, typos included:
+
+```ts
+type Env = { Variables: { requestId: string }; Bindings: { HEALTH_TOKEN: string } };
+const app = new Hono<Env>();
+
+app.route("/", healthRoute<Env>({
+  probes,
+  exposeChecks: (c) => c.req.header("x-health-token") === c.env.HEALTH_TOKEN,
+  extend: (_report, c) => ({ requestId: c.get("requestId") }),
+}));
+```
+
+Pass `check` instead of `probes` to share one `createHealthCheck()` between
+routes. Methods other than `GET` and `HEAD` are not registered and fall
+through to your app's `notFound`. All other options are documented in
+`@openstatus/health`.

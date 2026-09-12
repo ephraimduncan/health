@@ -1,37 +1,39 @@
-import type { Context, Handler } from "hono";
+import type { Context, Env, Handler } from "hono";
 import { Hono } from "hono";
 import {
-  createHealthCheck,
+  createHealthResponder,
   type HealthHandlerOptions,
   type HealthRouteOptions,
-  renderHealthResponse,
 } from "@openstatus/health";
 
-export type HonoHealthOptions = HealthRouteOptions<Context>;
+export type LooseEnv = {
+  readonly Bindings: Record<string, unknown>;
+  readonly Variables: Record<string, unknown>;
+};
 
-export type HonoHealthHandlerOptions = HealthHandlerOptions<Context>;
+export type HonoHealthOptions<E extends Env = LooseEnv> = HealthRouteOptions<
+  Context<E>
+>;
+
+export type HonoHealthHandlerOptions<E extends Env = LooseEnv> =
+  HealthHandlerOptions<Context<E>>;
 
 export const defaultPath = "/health";
 
-export function healthHandler(options: HonoHealthHandlerOptions): Handler {
-  const check = createHealthCheck(options);
-  return async (c: Context): Promise<Response> => {
-    const report = await check.report();
-    const extended = options.extend == null
-      ? {}
-      : await options.extend(report, c);
-    const rendered = renderHealthResponse(report, options, extended);
-    return new Response(
-      c.req.method === "HEAD" ? null : JSON.stringify(rendered.body),
-      { status: rendered.status, headers: rendered.headers },
-    );
-  };
+export function healthHandler<E extends Env = LooseEnv>(
+  options: HonoHealthHandlerOptions<E>,
+): Handler<E> {
+  const responder = createHealthResponder<Context<E>>(options);
+  return (c: Context<E>): Promise<Response> =>
+    responder.toResponse(c, c.req.method);
 }
 
-export function healthRoute(options: HonoHealthOptions): Hono {
-  const handler = healthHandler(options);
+export function healthRoute<E extends Env = LooseEnv>(
+  options: HonoHealthOptions<E>,
+): Hono<E> {
+  const handler = healthHandler<E>(options);
   const path = options.path ?? defaultPath;
-  const app = new Hono({ strict: false });
+  const app = new Hono<E>({ strict: false });
   for (const p of routePaths(path)) {
     app.on(["GET", "HEAD"], p, handler);
   }

@@ -101,6 +101,7 @@ Node runs and tests all behave the same way without branching.
 
 ## Public endpoints
 
-`extend` output renders even when `exposeChecks` is `false`. The colo is
-harmless to publish; the version id tells anyone polling exactly which build you
-are running. Serve two endpoints if that matters to you.
+`extend` output follows `exposeChecks`: when checks are hidden, `server` is
+hidden too. The colo is harmless to publish, the version id tells anyone
+polling exactly which build you are running — pass a function as
+`exposeChecks` to show the detailed body only to callers you trust.

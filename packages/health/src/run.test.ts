@@ -209,3 +209,34 @@ test("runProbes() keeps a late rejection handled", async () => {
     process.off("unhandledRejection", onUnhandled);
   }
 });
+
+test("runProbes() caps every probe's timeout at deadlineMs", async () => {
+  const seen: number[] = [];
+  const report = await runProbes(
+    [
+      {
+        name: "slow",
+        timeoutMs: 5000,
+        run: (signal, ctx) => {
+          seen.push(ctx.timeoutMs);
+          return new Promise<void>((_, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason));
+          });
+        },
+      },
+      {
+        name: "quick",
+        timeoutMs: 5,
+        run: (_signal, ctx) => {
+          seen.push(ctx.timeoutMs);
+        },
+      },
+    ],
+    { deadlineMs: 20 },
+  );
+  assert.deepEqual(seen, [20, 5]);
+  assert.equal(report.checks[0].status, "timeout");
+  assert.equal(report.checks[0].error, "timed out after 20ms");
+  assert.equal(report.checks[1].status, "ok");
+  assert.ok(report.latencyMs < 1000);
+});

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Elysia } from "elysia";
-import { DuplicateProbeError, type Probe } from "@openstatus/health";
+import {
+  createHealthCheck,
+  DuplicateProbeError,
+  type Probe,
+} from "@openstatus/health";
 import { healthHandler, healthRoute } from "./mod.ts";
 
 const ok: Probe = { name: "a", run: () => {} };
@@ -91,4 +95,71 @@ test("healthHandler() mounts on a plain route and answers GET and HEAD", async (
   );
   assert.equal(head.status, 200);
   assert.equal(await head.text(), "");
+});
+
+test("healthHandler() types the context from the app's decorators", async () => {
+  type Singleton = {
+    decorator: { db: string };
+    store: Record<never, never>;
+    derive: Record<never, never>;
+    resolve: Record<never, never>;
+  };
+  const app = new Elysia().decorate("db", "primary").get(
+    "/health",
+    healthHandler<Singleton>({
+      probes: [ok],
+      extend: (_report, ctx) => {
+        const db: string = ctx.db;
+        return { db };
+      },
+    }),
+  );
+  const res = await app.handle(new Request("http://localhost/health"));
+  assert.equal((await res.json()).db, "primary");
+});
+
+test("healthRoute() shares a prebuilt check between two routes", async () => {
+  let calls = 0;
+  const check = createHealthCheck({
+    probes: [{
+      name: "a",
+      run: () => {
+        calls++;
+      },
+    }],
+    cacheMs: 1000,
+  });
+  const app = new Elysia()
+    .use(healthRoute({ check, exposeChecks: false }))
+    .use(healthRoute({ check, path: "/_health" }));
+  const pub = await (await request(app, "/health")).json();
+  const ops = await (await request(app, "/_health")).json();
+  assert.equal(calls, 1);
+  assert.equal(pub.checks, undefined);
+  assert.equal(ops.checks.length, 1);
+});
+
+test("healthRoute() gates checks per request and survives a throwing extend", async () => {
+  const errors: string[] = [];
+  const app = new Elysia().use(healthRoute({
+    probes: [ok],
+    exposeChecks: (ctx) => ctx.headers["x-health-token"] === "s3cret",
+    extend: () => {
+      throw new Error("boom");
+    },
+    onError: (error) => {
+      errors.push(error.message);
+    },
+  }));
+  const anonymous = await (await request(app, "/health")).json();
+  assert.equal(anonymous.checks, undefined);
+  assert.deepEqual(errors, []);
+  const trusted = await app.handle(
+    new Request("http://localhost/health", {
+      headers: { "x-health-token": "s3cret" },
+    }),
+  );
+  assert.equal(trusted.status, 200);
+  assert.equal((await trusted.json()).checks.length, 1);
+  assert.deepEqual(errors, ["boom"]);
 });

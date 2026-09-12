@@ -80,10 +80,13 @@ process environment.
 
 ## Public endpoints
 
-`extend` output renders even when `exposeChecks` is `false`. Serve a terse
-public endpoint and a detailed internal one rather than one of each:
+`extend` output follows `exposeChecks`: when checks are hidden, `server` is
+hidden too. One route can serve both audiences by gating on the request:
 
 ```ts
-createHealthHandler({ probes, exposeChecks: false });
-createHealthHandler({ probes, extend: koyebExtend() });
+createHealthHandler({
+  probes,
+  exposeChecks: (req) => req.headers.get("x-health-token") === env.HEALTH_TOKEN,
+  extend: koyebExtend(),
+});
 ```

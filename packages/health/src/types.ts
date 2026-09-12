@@ -64,8 +64,15 @@ export type Extend<Ctx> = (
 
 export type OnReport = (report: HealthReport) => void | Promise<void>;
 
+export type OnError<Ctx> = (error: Error, ctx: Ctx) => void;
+
+export type ExposeChecks<Ctx> =
+  | boolean
+  | ((ctx: Ctx) => boolean | Promise<boolean>);
+
 export interface RunProbesOptions {
   readonly timeoutMs?: number;
+  readonly deadlineMs?: number;
   readonly formatError?: FormatErrorOption;
 }
 
@@ -73,6 +80,7 @@ export interface HealthCheckOptions extends RunProbesOptions {
   readonly probes: readonly Probe[];
   readonly cacheMs?: number;
   readonly cacheFailuresMs?: number;
+  readonly staleMs?: number;
   readonly onReport?: OnReport;
 }
 
@@ -82,15 +90,32 @@ export interface HealthResponseOptions {
   readonly degradedStatusCode?: number;
 }
 
-export interface HealthHandlerOptions<Ctx = Request>
-  extends HealthCheckOptions, HealthResponseOptions {
-  readonly extend?: Extend<Ctx>;
+export interface HealthProbesSource extends HealthCheckOptions {
+  readonly check?: undefined;
 }
 
-export interface HealthRouteOptions<Ctx = Request>
-  extends HealthHandlerOptions<Ctx> {
-  readonly path?: string;
+export interface HealthCheckSource {
+  readonly check: HealthCheck;
+  readonly probes?: undefined;
 }
+
+export type HealthSource = HealthProbesSource | HealthCheckSource;
+
+export interface HealthResponderOptions<Ctx = Request> {
+  readonly exposeChecks?: ExposeChecks<Ctx>;
+  readonly unhealthyStatusCode?: number;
+  readonly degradedStatusCode?: number;
+  readonly extend?: Extend<Ctx>;
+  readonly onError?: OnError<Ctx>;
+}
+
+export type HealthHandlerOptions<Ctx = Request> =
+  & HealthSource
+  & HealthResponderOptions<Ctx>;
+
+export type HealthRouteOptions<Ctx = Request> = HealthHandlerOptions<Ctx> & {
+  readonly path?: string;
+};
 
 export type HealthResponseBody = {
   readonly status: HealthStatus;
@@ -109,4 +134,10 @@ export type HealthHttpResponse = {
 export interface HealthCheck {
   report(): Promise<HealthReport>;
   invalidate(): void;
+}
+
+export interface HealthResponder<Ctx = Request> {
+  readonly check: HealthCheck;
+  respond(ctx: Ctx): Promise<HealthHttpResponse>;
+  toResponse(ctx: Ctx, method?: string): Promise<Response>;
 }

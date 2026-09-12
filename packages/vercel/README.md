@@ -83,6 +83,6 @@ from a record you supply instead of the process environment.
 
 ## Public endpoints
 
-`extend` output renders even when `exposeChecks` is `false`. Deployment ids and
-branch names are not for anonymous callers — serve a terse public route and a
-detailed internal one.
+`extend` output follows `exposeChecks`: when checks are hidden, `server` is
+hidden too, so deployment ids and branch names are never shown to anonymous
+callers. Pass a function as `exposeChecks` to decide per request.
