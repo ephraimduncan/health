@@ -1,13 +1,13 @@
 {
-  "name": "@openstatus/health-elysia",
+  "name": "@openstatus/health-upstash",
   "version": "0.1.0",
-  "description": "Elysia adapter for @openstatus/health",
+  "description": "Upstash Redis probe for @openstatus/health",
   "keywords": [
     "openstatus",
     "health",
     "healthcheck",
-    "elysia",
-    "bun"
+    "upstash",
+    "redis"
   ],
   "license": "MIT",
   "author": {
@@ -18,7 +18,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/openstatusHQ/health.git",
-    "directory": "packages/elysia/"
+    "directory": "packages/upstash/"
   },
   "bugs": {
     "url": "https://github.com/openstatusHQ/health/issues"
@@ -46,11 +46,9 @@
     "node": ">=22"
   },
   "peerDependencies": {
-    "@openstatus/health": "^0.1.0",
-    "elysia": "^1.4.0"
+    "@openstatus/health": "^0.1.0"
   },
   "devDependencies": {
-    "elysia": "^1.4.0",
     "tsdown": "^0.12.7",
     "typescript": "^5.8.3"
   },

@@ -3,7 +3,11 @@ import { createServer, type Server } from "node:http";
 import test from "node:test";
 import express from "express";
 import { DuplicateProbeError, type Probe } from "@openstatus/health";
-import { type ExpressHealthOptions, healthRouter } from "./mod.ts";
+import {
+  type ExpressHealthOptions,
+  healthHandler,
+  healthRoute,
+} from "./mod.ts";
 
 const ok: Probe = { name: "a", run: () => {} };
 const bad: Probe = {
@@ -19,7 +23,7 @@ async function withServer(
   fn: (base: string) => Promise<void>,
 ): Promise<void> {
   const app = express();
-  app.use(healthRouter(options));
+  app.use(healthRoute(options));
   const server: Server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
@@ -36,7 +40,7 @@ async function withServer(
   }
 }
 
-test("healthRouter() serves GET /health", async () => {
+test("healthRoute() serves GET /health", async () => {
   await withServer({ probes: [ok] }, async (base) => {
     const res = await fetch(`${base}/health`);
     assert.equal(res.status, 200);
@@ -47,7 +51,7 @@ test("healthRouter() serves GET /health", async () => {
   });
 });
 
-test("healthRouter() serves HEAD without a body", async () => {
+test("healthRoute() serves HEAD without a body", async () => {
   await withServer({ probes: [bad] }, async (base) => {
     const res = await fetch(`${base}/health`, { method: "HEAD" });
     assert.equal(res.status, 503);
@@ -55,7 +59,7 @@ test("healthRouter() serves HEAD without a body", async () => {
   });
 });
 
-test("healthRouter() honours a custom path", async () => {
+test("healthRoute() honours a custom path", async () => {
   await withServer({ probes: [ok], path: "/_status" }, async (base) => {
     assert.equal((await fetch(`${base}/_status`)).status, 200);
     const missing = await fetch(`${base}/health`);
@@ -64,7 +68,7 @@ test("healthRouter() honours a custom path", async () => {
   });
 });
 
-test("healthRouter() honours status code overrides", async () => {
+test("healthRoute() honours status code overrides", async () => {
   await withServer(
     { probes: [bad], unhealthyStatusCode: 200 },
     async (base) => {
@@ -75,7 +79,7 @@ test("healthRouter() honours status code overrides", async () => {
   );
 });
 
-test("healthRouter() passes the request to extend", async () => {
+test("healthRoute() passes the request to extend", async () => {
   const options: ExpressHealthOptions = {
     probes: [ok],
     extend: (_report, req) => ({ requestId: String(req.get("x-request-id")) }),
@@ -88,6 +92,34 @@ test("healthRouter() passes the request to extend", async () => {
   });
 });
 
-test("healthRouter() rejects duplicate probe names at construction", () => {
-  assert.throws(() => healthRouter({ probes: [ok, ok] }), DuplicateProbeError);
+test("healthRoute() rejects duplicate probe names at construction", () => {
+  assert.throws(() => healthRoute({ probes: [ok, ok] }), DuplicateProbeError);
+});
+
+test("healthHandler() mounts on a plain route and sees the full request", async () => {
+  const app = express();
+  app.get(
+    "/health",
+    healthHandler({
+      probes: [ok],
+      extend: (_report, req) => ({ ip: req.ip, host: req.hostname }),
+    }),
+  );
+  const server: Server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (address == null || typeof address === "string") {
+    throw new Error("server has no TCP address");
+  }
+  try {
+    const res = await fetch(`http://127.0.0.1:${address.port}/health`);
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.ip, "127.0.0.1");
+    assert.equal(body.host, "127.0.0.1");
+  } finally {
+    await new Promise<void>((resolve, reject) =>
+      server.close((e) => (e ? reject(e) : resolve()))
+    );
+  }
 });

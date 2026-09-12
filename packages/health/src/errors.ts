@@ -1,4 +1,4 @@
-import type { FormatError } from "./types.ts";
+import type { FormatError, FormatErrorOption } from "./types.ts";
 
 export class ProbeTimeoutError extends Error {
   readonly timeoutMs: number;
@@ -20,8 +20,18 @@ export class DuplicateProbeError extends Error {
   }
 }
 
-export const defaultFormatError: FormatError = (error) =>
+export const genericFormatError: FormatError = (error) =>
   error instanceof ProbeTimeoutError ? error.message : "failed";
+
+export const messageFormatError: FormatError = (error) => error.message;
+
+export function resolveFormatError(
+  option: FormatErrorOption | undefined,
+): FormatError {
+  if (option == null || option === "generic") return genericFormatError;
+  if (option === "message") return messageFormatError;
+  return option;
+}
 
 export function toError<T>(value: T): Error {
   return value instanceof Error ? value : new Error(String(value));

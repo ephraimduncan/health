@@ -5,11 +5,15 @@
 - `packages/<name>/` — one npm/JSR package per concern. `health` is the
   zero-dependency core; `hono`, `elysia`, `express`, `next` are server
   adapters; `tinybird`, `drizzle`, `turso`, `turso-serverless`, `supabase`,
-  `unkey` are probes; `fly`, `koyeb`, `railway`, `vercel`, `cloudflare` render
+  `unkey`, `upstash` are probes; `fly`, `koyeb`, `railway`, `vercel`, `cloudflare` render
   hosting metadata under `server` via the `extend` hook.
 - Each package has `deno.json` (`exports: ./src/mod.ts`), `package.json`
   (`exports -> dist/`, `sideEffects: false`), `tsdown.config.ts`, `README.md`
   and `src/` with `mod.ts`, implementation files and one `*.test.ts` per file.
+  `health` also exports `src/testing.ts` as `@openstatus/health/testing`;
+  probe and adapter tests use its doubles instead of local copies.
+  `health` also exports `src/testing.ts` as `@openstatus/health/testing`;
+  probe and adapter tests use its doubles instead of local copies.
 - `examples/` are type-checked in CI and never published.
 - `scripts/` hold workspace maintenance scripts.
 
@@ -27,6 +31,16 @@
 - Strict TypeScript. Never use `any` or `unknown`; spell out the union you
   mean or use a structural interface.
 - Explicit return types on every exported function (JSR rejects slow types).
+- Every server adapter exports `healthRoute(options)` (mounts `path`) and
+  `healthHandler(options)` (a bare handler for that framework). Options are
+  layered: `RunProbesOptions` ⊂ `HealthCheckOptions` ⊂ `HealthHandlerOptions`
+  ⊂ `HealthRouteOptions`; a function only accepts the layer it uses.
+- Probes take a client or URL; they never read the environment themselves.
+- Every server adapter exports `healthRoute(options)` (mounts `path`) and
+  `healthHandler(options)` (a bare handler for that framework). Options are
+  layered: `RunProbesOptions` ⊂ `HealthCheckOptions` ⊂ `HealthHandlerOptions`
+  ⊂ `HealthRouteOptions`; a function only accepts the layer it uses.
+- Probes take a client or URL; they never read the environment themselves.
 - No comments or JSDoc unless they explain something the code cannot.
 - Client libraries are imported with `import type` only. Runtime imports are
   limited to what is actually called.

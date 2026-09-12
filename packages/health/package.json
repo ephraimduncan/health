@@ -6,10 +6,9 @@
     "openstatus",
     "health",
     "healthcheck",
-    "health",
-    "healthcheck",
     "probe",
-    "readiness"
+    "readiness",
+    "liveness"
   ],
   "license": "MIT",
   "author": {
@@ -38,12 +37,23 @@
       "import": "./dist/mod.js",
       "require": "./dist/mod.cjs"
     },
+    "./testing": {
+      "types": {
+        "import": "./dist/testing.d.ts",
+        "require": "./dist/testing.d.cts"
+      },
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
     "./package.json": "./package.json"
   },
   "sideEffects": false,
   "files": [
     "dist/"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "devDependencies": {
     "tsdown": "^0.12.7",
     "typescript": "^5.8.3"

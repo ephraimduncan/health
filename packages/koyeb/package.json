@@ -42,6 +42,9 @@
   "files": [
     "dist/"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "peerDependencies": {
     "@openstatus/health": "^0.1.0"
   },

@@ -1,18 +1,18 @@
 import { runProbes } from "./run.ts";
 import type {
   HealthCheck,
-  HealthEndpointOptions,
+  HealthCheckOptions,
   HealthReport,
+  OnReport,
 } from "./types.ts";
 import { assertUniqueProbeNames } from "./validate.ts";
 
 export const defaultCacheMs = 5000;
 
-export function createHealthCheck<Ctx>(
-  options: HealthEndpointOptions<Ctx>,
-): HealthCheck {
+export function createHealthCheck(options: HealthCheckOptions): HealthCheck {
   assertUniqueProbeNames(options.probes);
   const cacheMs = options.cacheMs ?? defaultCacheMs;
+  const cacheFailuresMs = options.cacheFailuresMs ?? cacheMs;
   let cached:
     | { readonly at: number; readonly report: HealthReport }
     | undefined;
@@ -20,8 +20,11 @@ export function createHealthCheck<Ctx>(
 
   return {
     report(): Promise<HealthReport> {
-      if (cached != null && Date.now() - cached.at < cacheMs) {
-        return Promise.resolve(cached.report);
+      if (cached != null) {
+        const ttl = cached.report.status === "ok" ? cacheMs : cacheFailuresMs;
+        if (Date.now() - cached.at < ttl) {
+          return Promise.resolve(cached.report);
+        }
       }
       if (pending != null) return pending;
       pending = runProbes(options.probes, {
@@ -30,6 +33,7 @@ export function createHealthCheck<Ctx>(
       })
         .then((report) => {
           cached = { at: Date.now(), report };
+          notify(options.onReport, report);
           return report;
         })
         .finally(() => {
@@ -41,4 +45,14 @@ export function createHealthCheck<Ctx>(
       cached = undefined;
     },
   };
+}
+
+function notify(onReport: OnReport | undefined, report: HealthReport): void {
+  if (onReport == null) return;
+  try {
+    const result = onReport(report);
+    if (result instanceof Promise) result.catch(() => {});
+  } catch {
+    return;
+  }
 }

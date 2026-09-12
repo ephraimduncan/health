@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
 import { DuplicateProbeError, type Probe } from "@openstatus/health";
-import { healthRoute } from "./mod.ts";
+import { healthHandler, healthRoute } from "./mod.ts";
 
 const ok: Probe = { name: "a", run: () => {} };
 const bad: Probe = {
@@ -72,4 +72,21 @@ test("healthRoute() passes the Hono context to extend", async () => {
 
 test("healthRoute() rejects duplicate probe names at construction", () => {
   assert.throws(() => healthRoute({ probes: [ok, ok] }), DuplicateProbeError);
+});
+
+test("healthHandler() mounts on a plain route and answers GET and HEAD", async () => {
+  const a = new Hono().on(
+    ["GET", "HEAD"],
+    "/health",
+    healthHandler({
+      probes: [ok],
+      extend: (_report, c) => ({ requestId: c.req.header("x-request-id") }),
+    }),
+  );
+  const res = await a.request("/health", { headers: { "x-request-id": "r1" } });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).requestId, "r1");
+  const head = await a.request("/health", { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
 });

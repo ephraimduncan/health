@@ -1,56 +1,48 @@
 import express from "express";
-import type { Router } from "express";
+import type {
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+  Router,
+} from "express";
 import {
   createHealthCheck,
-  type HealthEndpointOptions,
+  type HealthHandlerOptions,
+  type HealthRouteOptions,
   renderHealthResponse,
 } from "@openstatus/health";
 
-export interface ExpressHealthRequest {
-  readonly method: string;
-  readonly url: string;
-  readonly originalUrl?: string;
-  readonly path?: string;
-  readonly headers: Record<string, string | string[] | undefined>;
-  get(name: string): string | string[] | undefined;
-}
+export type ExpressHealthOptions = HealthRouteOptions<Request>;
 
-export interface ExpressHealthResponse {
-  status(code: number): this;
-  set(headers: Record<string, string>): this;
-  send(body: string): this;
-  end(): this;
-}
-
-export type ExpressHealthOptions = HealthEndpointOptions<ExpressHealthRequest>;
+export type ExpressHealthHandlerOptions = HealthHandlerOptions<Request>;
 
 export const defaultPath = "/health";
 
-export function healthRouter(options: ExpressHealthOptions): Router {
+export function healthHandler(
+  options: ExpressHealthHandlerOptions,
+): RequestHandler {
   const check = createHealthCheck(options);
-  const path = options.path ?? defaultPath;
-  const router = express.Router();
-
-  const respond = async (
-    req: ExpressHealthRequest,
-    res: ExpressHealthResponse,
-    head: boolean,
-  ): Promise<void> => {
+  const respond = async (req: Request, res: Response): Promise<void> => {
     const report = await check.report();
     const extended = options.extend == null
       ? {}
       : await options.extend(report, req);
     const rendered = renderHealthResponse(report, options, extended);
     res.status(rendered.status).set({ ...rendered.headers });
-    if (head) res.end();
+    if (req.method === "HEAD") res.end();
     else res.send(JSON.stringify(rendered.body));
   };
+  return (req: Request, res: Response, next: NextFunction): void => {
+    respond(req, res).catch(next);
+  };
+}
 
-  router.get(path, (req, res, next) => {
-    respond(req, res, false).catch(next);
-  });
-  router.head(path, (req, res, next) => {
-    respond(req, res, true).catch(next);
-  });
+export function healthRoute(options: ExpressHealthOptions): Router {
+  const handler = healthHandler(options);
+  const path = options.path ?? defaultPath;
+  const router = express.Router();
+  router.get(path, handler);
+  router.head(path, handler);
   return router;
 }

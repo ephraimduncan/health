@@ -1,6 +1,6 @@
 # Releasing
 
-All ten packages share one version and are released together. Publishing is
+All packages share one version and are released together. Publishing is
 manual; CI only proves that a release would succeed (`deno publish --dry-run`
 and `npm pack --dry-run` run on every push).
 

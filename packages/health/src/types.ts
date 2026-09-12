@@ -11,12 +11,21 @@ export type ProbeResult =
   | string
   | object;
 
+export interface ProbeContext {
+  readonly name: string;
+  readonly critical: boolean;
+  readonly timeoutMs: number;
+}
+
 export interface Probe {
   readonly name: string;
   readonly critical?: boolean;
   readonly timeoutMs?: number;
-  readonly skip?: () => boolean;
-  readonly run: (signal: AbortSignal) => ProbeResult | Promise<ProbeResult>;
+  readonly skip?: () => boolean | Promise<boolean>;
+  readonly run: (
+    signal: AbortSignal,
+    ctx: ProbeContext,
+  ) => ProbeResult | Promise<ProbeResult>;
 }
 
 export type ProbeOverrides = Partial<
@@ -46,21 +55,41 @@ export type JsonObject = { readonly [key: string]: JsonValue | undefined };
 
 export type FormatError = (error: Error) => string;
 
+export type FormatErrorOption = FormatError | "generic" | "message";
+
 export type Extend<Ctx> = (
   report: HealthReport,
   ctx: Ctx,
-) => JsonObject | Promise<JsonObject>;
+) => object | Promise<object>;
 
-export interface HealthEndpointOptions<Ctx = Request> {
-  readonly probes: readonly Probe[];
-  readonly path?: string;
-  readonly cacheMs?: number;
+export type OnReport = (report: HealthReport) => void | Promise<void>;
+
+export interface RunProbesOptions {
   readonly timeoutMs?: number;
+  readonly formatError?: FormatErrorOption;
+}
+
+export interface HealthCheckOptions extends RunProbesOptions {
+  readonly probes: readonly Probe[];
+  readonly cacheMs?: number;
+  readonly cacheFailuresMs?: number;
+  readonly onReport?: OnReport;
+}
+
+export interface HealthResponseOptions {
   readonly exposeChecks?: boolean;
   readonly unhealthyStatusCode?: number;
   readonly degradedStatusCode?: number;
+}
+
+export interface HealthHandlerOptions<Ctx = Request>
+  extends HealthCheckOptions, HealthResponseOptions {
   readonly extend?: Extend<Ctx>;
-  readonly formatError?: FormatError;
+}
+
+export interface HealthRouteOptions<Ctx = Request>
+  extends HealthHandlerOptions<Ctx> {
+  readonly path?: string;
 }
 
 export type HealthResponseBody = {
@@ -68,7 +97,7 @@ export type HealthResponseBody = {
   readonly checkedAt: string;
   readonly latencyMs?: number;
   readonly checks?: readonly CheckResult[];
-  readonly [key: string]: JsonValue | undefined;
+  readonly [key: string]: JsonValue | object | undefined;
 };
 
 export type HealthHttpResponse = {

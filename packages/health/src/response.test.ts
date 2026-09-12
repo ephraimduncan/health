@@ -11,14 +11,13 @@ const report = (status: HealthReport["status"]): HealthReport => ({
 });
 
 test("statusCodeFor() maps statuses to defaults", () => {
-  assert.equal(statusCodeFor(report("ok"), { probes: [] }), 200);
-  assert.equal(statusCodeFor(report("degraded"), { probes: [] }), 200);
-  assert.equal(statusCodeFor(report("unhealthy"), { probes: [] }), 503);
+  assert.equal(statusCodeFor(report("ok"), {}), 200);
+  assert.equal(statusCodeFor(report("degraded"), {}), 200);
+  assert.equal(statusCodeFor(report("unhealthy"), {}), 503);
 });
 
 test("statusCodeFor() honours overrides", () => {
   const options = {
-    probes: [],
     unhealthyStatusCode: 200,
     degradedStatusCode: 299,
   };
@@ -27,7 +26,7 @@ test("statusCodeFor() honours overrides", () => {
 });
 
 test("renderHealthResponse() exposes checks by default", () => {
-  const res = renderHealthResponse(report("ok"), { probes: [] });
+  const res = renderHealthResponse(report("ok"), {});
   assert.equal(res.status, 200);
   assert.equal(res.headers["cache-control"], "no-store");
   assert.equal(res.headers["content-type"], "application/json; charset=utf-8");
@@ -41,7 +40,6 @@ test("renderHealthResponse() exposes checks by default", () => {
 
 test("renderHealthResponse() hides checks and latency when exposeChecks is false", () => {
   const res = renderHealthResponse(report("degraded"), {
-    probes: [],
     exposeChecks: false,
   });
   assert.deepEqual(res.body, {
@@ -52,7 +50,6 @@ test("renderHealthResponse() hides checks and latency when exposeChecks is false
 
 test("renderHealthResponse() merges extra fields without overriding the report", () => {
   const res = renderHealthResponse(report("ok"), {
-    probes: [],
     exposeChecks: false,
   }, {
     region: "fra",
@@ -63,4 +60,19 @@ test("renderHealthResponse() merges extra fields without overriding the report",
     status: "ok",
     checkedAt: "2026-09-11T00:00:00.000Z",
   });
+});
+
+test("renderHealthResponse() accepts interface-typed and Date fields", () => {
+  interface Vitals {
+    readonly rss: number;
+  }
+  const vitals: Vitals = { rss: 1 };
+  const res = renderHealthResponse(report("ok"), { exposeChecks: false }, {
+    vitals,
+    at: new Date("2026-09-11T00:00:00.000Z"),
+  });
+  assert.equal(
+    JSON.stringify(res.body),
+    '{"vitals":{"rss":1},"at":"2026-09-11T00:00:00.000Z","status":"ok","checkedAt":"2026-09-11T00:00:00.000Z"}',
+  );
 });

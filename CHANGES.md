@@ -5,25 +5,37 @@
 Initial release.
 
 - `@openstatus/health`: dependency-free core — `runProbes()`,
-  `createHealthCheck()` (TTL cache + in-flight de-duplication),
-  `renderHealthResponse()`, Fetch-API `createHealthHandler()`, and the
-  `httpProbe()` / `expectOk()` / `probe()` helpers, and `readEnv()` for
-  environment lookups that work the same under Node, Bun, Deno and Workers. Reports aggregate to
-  `ok | degraded | unhealthy`; timeouts count as failures; error text is
-  generic unless `formatError` is supplied.
-- Server adapters: `@openstatus/health-hono` (`healthRoute()`),
-  `@openstatus/health-elysia` (`health()`), `@openstatus/health-express`
-  (`healthRouter()`), `@openstatus/health-next` (`healthRoute()` for the App
-  Router). Every adapter answers `GET` and `HEAD`, honours `path`,
-  `exposeChecks`, `unhealthyStatusCode`, `degradedStatusCode` and passes its
-  framework context to `extend()`.
+  `createHealthCheck()` (TTL cache + in-flight de-duplication, separate
+  `cacheFailuresMs` for non-ok reports, `onReport` hook),
+  `renderHealthResponse()`, Fetch-API `createHealthHandler()` (honours `path`
+  when set) and `createLazyHealthHandler()` for per-request environments such
+  as Workers, the `httpProbe()` / `expectOk()` / `probe()` helpers, and
+  `readEnv()` for environment lookups that work the same under Node, Bun,
+  Deno and Workers. Reports aggregate to `ok | degraded | unhealthy`; timeouts
+  count as failures; error text is generic unless `formatError` is
+  `"message"` or a function. Probes receive `(signal, { name, critical,
+  timeoutMs })`; `skip` may be async and runs inside the timeout. `extend`
+  accepts anything `JSON.stringify` does. Options are layered
+  (`RunProbesOptions` ⊂ `HealthCheckOptions` ⊂ `HealthHandlerOptions` ⊂
+  `HealthRouteOptions`) so each function only accepts what it uses.
+  `@openstatus/health/testing` ships `fakeFetch`, `hangFetch` and probe
+  fixtures.
+- Server adapters: `@openstatus/health-hono`, `@openstatus/health-elysia`,
+  `@openstatus/health-express` and `@openstatus/health-next` each export
+  `healthRoute()` (mounts `GET` and `HEAD` on `path`); the first three also
+  export `healthHandler()`, a bare handler for the framework. Every adapter
+  honours `exposeChecks`, `unhealthyStatusCode`, `degradedStatusCode` and
+  passes its full framework context (Hono `Context`, Elysia `Context`,
+  Express `Request`, `NextRequest`) to `extend()`.
 - Probes: `@openstatus/health-tinybird` (`GET /v0/health`),
-  `@openstatus/health-unkey` (`GET /v2/liveness`), `@openstatus/health-turso`
-  (`select 1` on a libSQL client), `@openstatus/health-turso-serverless`
-  (`select 1` on a `@tursodatabase/serverless` connection),
-  `@openstatus/health-drizzle` (`select 1` via `execute` or `run`),
-  `@openstatus/health-supabase` (`health_connection_pressure()` RPC with a
-  `maxConnectionPercent` threshold).
+  `@openstatus/health-unkey` (`GET /v2/liveness`),
+  `@openstatus/health-upstash` (`GET /ping` on the Upstash REST API),
+  `@openstatus/health-turso` (`select 1` on a libSQL client),
+  `@openstatus/health-turso-serverless` (`select 1` on a
+  `@tursodatabase/serverless` connection), `@openstatus/health-drizzle`
+  (`select 1` via `execute` or `run`), `@openstatus/health-supabase`
+  (`health_connection_pressure()` RPC with a `maxConnectionPercent`
+  threshold).
 - Hosting packages: `@openstatus/health-fly`, `@openstatus/health-koyeb`,
   `@openstatus/health-railway`, `@openstatus/health-vercel` and
   `@openstatus/health-cloudflare` render the region, instance and deployment

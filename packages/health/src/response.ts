@@ -1,9 +1,8 @@
 import type {
-  HealthEndpointOptions,
   HealthHttpResponse,
   HealthReport,
   HealthResponseBody,
-  JsonObject,
+  HealthResponseOptions,
 } from "./types.ts";
 
 export const defaultUnhealthyStatusCode = 503;
@@ -14,9 +13,9 @@ export const healthHeaders: Readonly<Record<string, string>> = {
   "cache-control": "no-store",
 };
 
-export function statusCodeFor<Ctx>(
+export function statusCodeFor(
   report: HealthReport,
-  options: HealthEndpointOptions<Ctx>,
+  options: HealthResponseOptions,
 ): number {
   switch (report.status) {
     case "unhealthy":
@@ -28,10 +27,10 @@ export function statusCodeFor<Ctx>(
   }
 }
 
-export function renderHealthResponse<Ctx>(
+export function renderHealthResponse(
   report: HealthReport,
-  options: HealthEndpointOptions<Ctx>,
-  extended: JsonObject = {},
+  options: HealthResponseOptions,
+  extended: object = {},
 ): HealthHttpResponse {
   const exposeChecks = options.exposeChecks ?? true;
   const body: HealthResponseBody = exposeChecks

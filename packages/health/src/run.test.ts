@@ -151,3 +151,61 @@ test("runProbes() accepts probes resolving to values", async () => {
   ]);
   assert.equal(report.status, "ok");
 });
+
+test("runProbes() awaits an async skip()", async () => {
+  let ran = false;
+  const report = await runProbes([{
+    name: "a",
+    skip: () => Promise.resolve(true),
+    run: () => {
+      ran = true;
+    },
+  }]);
+  assert.equal(ran, false);
+  assert.equal(report.checks[0].status, "skipped");
+});
+
+test("runProbes() times out a hanging skip()", async () => {
+  const report = await runProbes([{
+    name: "a",
+    timeoutMs: 10,
+    skip: () => new Promise<boolean>(() => {}),
+    run: () => {},
+  }]);
+  assert.equal(report.checks[0].status, "timeout");
+});
+
+test("runProbes() passes name, critical and timeoutMs to run()", async () => {
+  let seen: { name: string; critical: boolean; timeoutMs: number } | undefined;
+  await runProbes([{
+    name: "a",
+    critical: true,
+    run: (_signal, ctx) => {
+      seen = { ...ctx };
+    },
+  }], { timeoutMs: 123 });
+  assert.deepEqual(seen, { name: "a", critical: true, timeoutMs: 123 });
+});
+
+test("runProbes() keeps a late rejection handled", async () => {
+  let unhandled = 0;
+  const onUnhandled = (): void => {
+    unhandled++;
+  };
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const report = await runProbes([{
+      name: "a",
+      timeoutMs: 10,
+      run: () =>
+        new Promise<void>((_, reject) => {
+          setTimeout(() => reject(new Error("late")), 30);
+        }),
+    }]);
+    assert.equal(report.checks[0].status, "timeout");
+    await delay(50);
+    assert.equal(unhandled, 0);
+  } finally {
+    process.off("unhandledRejection", onUnhandled);
+  }
+});

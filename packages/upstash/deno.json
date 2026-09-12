@@ -1,11 +1,8 @@
 {
-  "name": "@openstatus/health",
+  "name": "@openstatus/health-upstash",
   "version": "0.1.0",
   "license": "MIT",
-  "exports": {
-    ".": "./src/mod.ts",
-    "./testing": "./src/testing.ts"
-  },
+  "exports": "./src/mod.ts",
   "exclude": [
     "dist/"
   ],

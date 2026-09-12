@@ -11,6 +11,8 @@ unhealthy`; thin adapters mount it as `GET /health` on your framework; thin
 probe packages know how to ping one dependency each.
 
 Runs on Deno, Node ≥ 22, Bun and edge runtimes. Published to JSR and npm.
+Built and used in production by [openstatus](https://www.openstatus.dev/),
+the open-source uptime monitoring and status page platform.
 
 ```json
 {
@@ -52,6 +54,7 @@ Runs on Deno, Node ≥ 22, Bun and edge runtimes. Published to JSR and npm.
 | [`@openstatus/health-turso`](packages/turso) | [![JSR](https://jsr.io/badges/@openstatus/health-turso)](https://jsr.io/@openstatus/health-turso) | [![npm](https://img.shields.io/npm/v/@openstatus/health-turso)](https://www.npmjs.com/package/@openstatus/health-turso) | Turso libSQL `select 1` probe (`@libsql/client`) |
 | [`@openstatus/health-turso-serverless`](packages/turso-serverless) | [![JSR](https://jsr.io/badges/@openstatus/health-turso-serverless)](https://jsr.io/@openstatus/health-turso-serverless) | [![npm](https://img.shields.io/npm/v/@openstatus/health-turso-serverless)](https://www.npmjs.com/package/@openstatus/health-turso-serverless) | Turso `select 1` probe over the serverless driver (`@tursodatabase/serverless`) |
 | [`@openstatus/health-unkey`](packages/unkey) | [![JSR](https://jsr.io/badges/@openstatus/health-unkey)](https://jsr.io/@openstatus/health-unkey) | [![npm](https://img.shields.io/npm/v/@openstatus/health-unkey)](https://www.npmjs.com/package/@openstatus/health-unkey) | Unkey liveness probe |
+| [`@openstatus/health-upstash`](packages/upstash) | [![JSR](https://jsr.io/badges/@openstatus/health-upstash)](https://jsr.io/@openstatus/health-upstash) | [![npm](https://img.shields.io/npm/v/@openstatus/health-upstash)](https://www.npmjs.com/package/@openstatus/health-upstash) | Upstash Redis `PING` probe over REST |
 
 ### Hosting
 
@@ -78,11 +81,18 @@ deno add jsr:@openstatus/health jsr:@openstatus/health-hono jsr:@openstatus/heal
 npm install @openstatus/health @openstatus/health-hono @openstatus/health-turso
 ```
 
+Every adapter exports the same two functions. `healthRoute(options)` is the
+batteries-included form: it mounts `GET` and `HEAD` on `options.path`
+(default `/health`). `healthHandler(options)` is the primitive underneath — a
+plain handler for that framework — for when you want to pick the path, stack
+your own middleware in front, or register it the way you register everything
+else.
+
 ### Hono
 
 ```ts
 import { Hono } from "hono";
-import { healthRoute } from "@openstatus/health-hono";
+import { healthHandler, healthRoute } from "@openstatus/health-hono";
 import { tursoProbe } from "@openstatus/health-turso";
 import { unkeyProbe } from "@openstatus/health-unkey";
 
@@ -92,27 +102,30 @@ app.route("/", healthRoute({
   probes: [tursoProbe({ client }), unkeyProbe()],
   extend: (_report, c) => ({ requestId: c.get("requestId") }),
 }));
+
+// or, on a route of your own:
+app.on(["GET", "HEAD"], "/health", healthHandler({ probes: [unkeyProbe()] }));
 ```
 
 ### Elysia
 
 ```ts
 import { Elysia } from "elysia";
-import { health } from "@openstatus/health-elysia";
+import { healthRoute } from "@openstatus/health-elysia";
 import { tinybirdProbe } from "@openstatus/health-tinybird";
 
-new Elysia().use(health({ probes: [tinybirdProbe()] })).listen(3000);
+new Elysia().use(healthRoute({ probes: [tinybirdProbe()] })).listen(3000);
 ```
 
 ### Express
 
 ```ts
 import express from "express";
-import { healthRouter } from "@openstatus/health-express";
+import { healthRoute } from "@openstatus/health-express";
 import { drizzleProbe } from "@openstatus/health-drizzle";
 
 const app = express();
-app.use(healthRouter({ probes: [drizzleProbe({ db })] }));
+app.use(healthRoute({ probes: [drizzleProbe({ db })] }));
 ```
 
 ### Next.js (App Router)
@@ -122,6 +135,7 @@ app.use(healthRouter({ probes: [drizzleProbe({ db })] }));
 import { healthRoute } from "@openstatus/health-next";
 import { supabaseProbe } from "@openstatus/health-supabase";
 
+// required: keeps Next.js from statically caching the route
 export const dynamic = "force-dynamic";
 
 export const { GET, HEAD } = healthRoute({ probes: [supabaseProbe({ client })] });
@@ -132,28 +146,20 @@ export const { GET, HEAD } = healthRoute({ probes: [supabaseProbe({ client })] }
 ```ts
 import { createHealthHandler } from "@openstatus/health";
 
-Deno.serve(createHealthHandler({ probes: [/* ... */] }));
+Deno.serve(createHealthHandler({ path: "/health", probes: [/* ... */] }));
 ```
 
 ## Options
 
-Every adapter takes the same options:
-
-| Option | Default | Description |
-| ------ | ------- | ----------- |
-| `probes` | — | The probes to run, concurrently, on every uncached request. |
-| `path` | `"/health"` | Route the adapter mounts (ignored by Next.js, where the file is the route). |
-| `cacheMs` | `5000` | Reuse the last report for this long; concurrent callers share one round. `0` disables. |
-| `timeoutMs` | `5000` | Default per-probe timeout; a hung probe reports `timeout`. |
-| `exposeChecks` | `true` | Include `latencyMs` and `checks` in the body. `false` returns only `{ status, checkedAt }` — for public endpoints. |
-| `unhealthyStatusCode` | `503` | HTTP status for `unhealthy`. Set `200` to always answer 200 and let callers read `status`. |
-| `degradedStatusCode` | `200` | HTTP status for `degraded`. |
-| `extend` | — | `(report, ctx) => object` merged into the body: request id, vitals, or a `server` object from a hosting package. `ctx` is the framework request context. |
-| `formatError` | generic | Errors are reported as `"failed"` / `"timed out after Nms"` unless you supply `(error) => string`. |
+Every entry point takes the same options — `probes`, `path`, `cacheMs`,
+`timeoutMs`, `exposeChecks`, `unhealthyStatusCode`, `degradedStatusCode`,
+`extend`, `formatError`, `onReport` — documented once in
+[`packages/health`](packages/health#options).
 
 Aggregation: a failing or timed-out **critical** probe makes the report
 `unhealthy`; a failing non-critical probe makes it `degraded`; `skipped`
-probes never affect it.
+probes never affect it. Errors are masked as `"failed"` unless you opt in
+with `formatError: "message"`.
 
 ## Probes
 
@@ -165,6 +171,7 @@ probes never affect it.
 | `tursoServerlessProbe({ connection })` | `database` | yes | `connection.get("select 1")` on a Turso serverless `Connection` |
 | `drizzleProbe({ db })` | `database` | yes | `db.execute(sql\`select 1\`)` or `db.run(...)` |
 | `supabaseProbe({ client, maxConnectionPercent? })` | `supabase` | no | `rpc("health_connection_pressure")` ≤ threshold |
+| `upstashProbe({ url, token })` | `redis` | no | `GET {url}/ping` with the REST token |
 
 Every probe factory accepts `name`, `critical`, `timeoutMs` and `skip`
 overrides. Probes take a client instance or a base URL — they never read
@@ -176,28 +183,32 @@ A probe is a plain object. Resolve for healthy, reject or throw for failed,
 and honour the `AbortSignal` so a timeout actually cancels the work:
 
 ```ts
-import { httpProbe, type Probe } from "@openstatus/health";
+import { httpProbe, probe } from "@openstatus/health";
 
-const redis: Probe = {
-  name: "redis",
+const queue = probe({
+  name: "queue",
   critical: true,
   timeoutMs: 1000,
-  skip: () => !env.UPSTASH_REDIS_REST_URL,
-  run: async (signal) => {
-    const res = await fetch(`${env.UPSTASH_REDIS_REST_URL}/ping`, {
-      headers: { authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}` },
-      signal,
-    });
-    if (!res.ok) throw new Error(`redis answered ${res.status}`);
+  skip: () => !env.QUEUE_URL,
+  run: async (signal, ctx) => {
+    const res = await fetch(`${env.QUEUE_URL}/depth`, { signal });
+    if (!res.ok) throw new Error(`${ctx.name} answered ${res.status}`);
+    const { depth } = await res.json();
+    if (depth > 10_000) throw new Error(`queue depth ${depth}`);
   },
-};
+});
 
 const docs = httpProbe({ name: "docs", url: "https://docs.example.com", method: "HEAD" });
 ```
 
-`skip` is evaluated synchronously on every request and reports the check as
+`skip` runs on every request, may be async, and reports the check as
 `skipped` without running it — use it for optional dependencies that are not
-configured in every environment.
+configured in every environment. `ctx` carries the probe's `name`, `critical`
+flag and effective `timeoutMs`.
+
+`@openstatus/health/testing` exports `fakeFetch`, `hangFetch` and ready-made
+`okProbe` / `failingProbe` / `hangingProbe` fixtures for testing probes and
+adapters of your own.
 
 ## Server metadata
 
@@ -239,7 +250,8 @@ Fly and `DFW` on Cloudflare.
 
 Each package also exports the data on its own — `flyServer()`, `vercelServer()`
 — so you can compose it with your own fields, or chain platforms if one build
-deploys to several:
+deploys to several. `extend` may return anything `JSON.stringify` accepts;
+the report's own fields always take precedence over keys of the same name:
 
 ```ts
 extend: (_report, c) => ({
@@ -266,6 +278,20 @@ deno task test-all         # all of the above
 
 See [`AGENTS.md`](AGENTS.md) for conventions and [`RELEASING.md`](RELEASING.md)
 for the release checklist.
+
+## About openstatus
+
+[openstatus](https://www.openstatus.dev/) monitors endpoints from regions
+around the world and turns the results into status pages and alerts. These
+packages are the `/health` endpoints behind openstatus's own services,
+extracted so any JavaScript server can expose one — and so a monitor has
+something more useful to poll than `200 OK`. Point an
+[openstatus monitor](https://www.openstatus.dev/docs/reference/http-monitor) at the endpoint and assert
+on `status` in the body to be alerted on `degraded` before it becomes
+`unhealthy`.
+
+Source: [github.com/openstatusHQ/health](https://github.com/openstatusHQ/health).
+Issues and PRs welcome.
 
 ## License
 

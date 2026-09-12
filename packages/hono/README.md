@@ -27,7 +27,19 @@ app.route(
 `healthRoute(options)` returns a `Hono` sub-app that answers `GET` and `HEAD`
 on `options.path` (default `/health`). Both `/health` and `/health/` are
 registered, so the trailing slash matches regardless of the parent app's
-`strict` setting. Mount it with `app.route("/", ...)`.
+`strict` setting. Mount it with `app.route("/", ...)` — the path is already
+inside the sub-app, so `app.route("/health", ...)` would serve
+`/health/health`.
 
-`extend` receives the Hono `Context` as its second argument. All other options
-are documented in `@openstatus/health`.
+When you would rather own the route, `healthHandler(options)` returns a plain
+Hono `Handler` that answers both methods and takes every option except `path`:
+
+```ts
+import { healthHandler } from "@openstatus/health-hono";
+
+app.on(["GET", "HEAD"], "/health", auth, healthHandler({ probes }));
+```
+
+`extend` receives the Hono `Context` as its second argument. Methods other
+than `GET` and `HEAD` are not registered and fall through to your app's
+`notFound`. All other options are documented in `@openstatus/health`.

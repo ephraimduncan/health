@@ -43,6 +43,9 @@
   "files": [
     "dist/"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "peerDependencies": {
     "@openstatus/health": "^0.1.0",
     "drizzle-orm": ">=0.30.0"

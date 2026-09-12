@@ -14,7 +14,6 @@
   "publish": {
     "exclude": [
       "**/*.test.ts",
-      "src/fake-fetch.ts",
       "tsdown.config.ts",
       "dist/"
     ]

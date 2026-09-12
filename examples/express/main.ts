@@ -1,10 +1,10 @@
 import express from "express";
-import { healthRouter } from "@openstatus/health-express";
+import { healthRoute } from "@openstatus/health-express";
 import { exampleProbes } from "../probes.ts";
 import { exampleServer } from "../server.ts";
 
 const app = express();
-app.use(healthRouter({
+app.use(healthRoute({
   probes: exampleProbes(),
   extend: (_report, req) => ({
     ...exampleServer(),

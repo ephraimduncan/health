@@ -41,6 +41,9 @@
   "files": [
     "dist/"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "peerDependencies": {
     "@openstatus/health": "^0.1.0",
     "express": "^4.0.0 || ^5.0.0"

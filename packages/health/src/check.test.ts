@@ -106,3 +106,57 @@ test("createHealthCheck() forwards timeoutMs and formatError", async () => {
   assert.equal(report.checks[0].status, "timeout");
   assert.equal(report.checks[0].error, "ProbeTimeoutError");
 });
+
+test("createHealthCheck() honours cacheFailuresMs for non-ok reports", async () => {
+  const { probe, calls } = counting("a", true);
+  const check = createHealthCheck({
+    probes: [probe],
+    cacheMs: 1000,
+    cacheFailuresMs: 0,
+  });
+  assert.equal((await check.report()).status, "degraded");
+  await check.report();
+  assert.equal(calls(), 2);
+});
+
+test("createHealthCheck() calls onReport once per uncached round", async () => {
+  const { probe } = counting("a");
+  const seen: string[] = [];
+  const check = createHealthCheck({
+    probes: [probe],
+    cacheMs: 1000,
+    onReport: (report) => {
+      seen.push(report.status);
+    },
+  });
+  await check.report();
+  await check.report();
+  assert.deepEqual(seen, ["ok"]);
+});
+
+test("createHealthCheck() swallows onReport errors", async () => {
+  const { probe } = counting("a");
+  const check = createHealthCheck({
+    probes: [probe],
+    onReport: () => {
+      throw new Error("logger down");
+    },
+  });
+  assert.equal((await check.report()).status, "ok");
+  const rejecting = createHealthCheck({
+    probes: [probe],
+    onReport: () => Promise.reject(new Error("logger down")),
+  });
+  assert.equal((await rejecting.report()).status, "ok");
+});
+
+test("createHealthCheck() accepts the formatError presets", async () => {
+  const { probe } = counting("a", true);
+  const generic = await createHealthCheck({ probes: [probe] }).report();
+  assert.equal(generic.checks[0].error, "failed");
+  const message = await createHealthCheck({
+    probes: [probe],
+    formatError: "message",
+  }).report();
+  assert.equal(message.checks[0].error, "boom");
+});

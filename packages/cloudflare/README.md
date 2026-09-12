@@ -11,19 +11,14 @@ npm install @openstatus/health @openstatus/health-cloudflare
 ```
 
 ```ts
-import { createHealthHandler, type HealthHandler } from "@openstatus/health";
+import { createLazyHealthHandler } from "@openstatus/health";
 import { cloudflareExtend } from "@openstatus/health-cloudflare";
 
-let handler: HealthHandler | undefined;
-
 export default {
-  fetch(request: Request, env: Env): Promise<Response> {
-    handler ??= createHealthHandler({
-      probes: [/* ... */],
-      extend: cloudflareExtend({ version: env.CF_VERSION_METADATA }),
-    });
-    return handler(request);
-  },
+  fetch: createLazyHealthHandler<Request, Env>((env) => ({
+    probes: [/* ... */],
+    extend: cloudflareExtend({ version: env.CF_VERSION_METADATA }),
+  })),
 };
 ```
 
@@ -44,9 +39,10 @@ export default {
 
 Bindings only exist inside `fetch(request, env)`, but the handler must be built
 once — construct it per request and every request gets a fresh cache, so
-`cacheMs` never de-duplicates anything and your probes run on every poll. The
-`handler ??=` above is the whole trick: built on the first request, when `env`
-is finally in scope, and reused after that.
+`cacheMs` never de-duplicates anything and your probes run on every poll.
+`createLazyHealthHandler` does the bookkeeping: your callback runs on the first
+request, when `env` is finally in scope, and the handler it builds is reused
+after that. It is the same as `createHealthHandler` in every other respect.
 
 ## Fields
 

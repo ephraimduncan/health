@@ -1,8 +1,9 @@
-import type { JsonValue } from "@openstatus/health";
+import type { JsonValue, Probe } from "./types.ts";
 
 export interface FetchCall {
   readonly url: string;
   readonly method: string;
+  readonly headers: Headers;
   readonly signal?: AbortSignal;
 }
 
@@ -22,6 +23,7 @@ export function fakeFetch(options: FakeFetchOptions = {}): typeof fetch {
     const call: FetchCall = {
       url,
       method: init?.method ?? "GET",
+      headers: new Headers(init?.headers),
       signal: init?.signal ?? undefined,
     };
     options.onFetch?.(call);
@@ -42,5 +44,41 @@ export function hangFetch(track?: { aborted: boolean }): typeof fetch {
       }, { once: true });
     }
     return new Promise<Response>(() => {});
+  };
+}
+
+export function okProbe(name: string, critical = false): Probe {
+  return { name, critical, run: () => {} };
+}
+
+export function failingProbe(
+  name: string,
+  critical = false,
+  error: Error = new Error(`${name} failed`),
+): Probe {
+  return {
+    name,
+    critical,
+    run: () => {
+      throw error;
+    },
+  };
+}
+
+export function hangingProbe(
+  name: string,
+  critical = false,
+  timeoutMs?: number,
+): Probe {
+  return {
+    name,
+    critical,
+    timeoutMs,
+    run: (signal) =>
+      new Promise<void>((_, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), {
+          once: true,
+        });
+      }),
   };
 }

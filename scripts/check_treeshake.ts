@@ -10,9 +10,9 @@ interface Target {
 const targets: Record<string, Target> = {
   "@openstatus/health": { symbol: "runProbes", allowed: [] },
   "@openstatus/health-hono": { symbol: "healthRoute", allowed: ["hono"] },
-  "@openstatus/health-elysia": { symbol: "health", allowed: ["elysia"] },
+  "@openstatus/health-elysia": { symbol: "healthRoute", allowed: ["elysia"] },
   "@openstatus/health-express": {
-    symbol: "healthRouter",
+    symbol: "healthRoute",
     allowed: ["express"],
   },
   "@openstatus/health-next": { symbol: "healthRoute", allowed: [] },
@@ -36,6 +36,7 @@ const targets: Record<string, Target> = {
   },
   "@openstatus/health-supabase": { symbol: "supabaseProbe", allowed: [] },
   "@openstatus/health-unkey": { symbol: "unkeyProbe", allowed: [] },
+  "@openstatus/health-upstash": { symbol: "upstashProbe", allowed: [] },
 };
 
 const banned = [

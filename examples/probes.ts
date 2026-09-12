@@ -9,6 +9,7 @@ import { tinybirdProbe } from "@openstatus/health-tinybird";
 import { tursoProbe } from "@openstatus/health-turso";
 import { tursoServerlessProbe } from "@openstatus/health-turso-serverless";
 import { unkeyProbe } from "@openstatus/health-unkey";
+import { upstashProbe } from "@openstatus/health-upstash";
 
 const env = (name: string): string | undefined => Deno.env.get(name);
 
@@ -55,6 +56,11 @@ export function exampleProbes(): Probe[] {
     supabaseProbe({
       client: supabase,
       skip: () => env("SUPABASE_NOOP") === "true",
+    }),
+    upstashProbe({
+      url: env("UPSTASH_REDIS_REST_URL") ?? "http://localhost:8079",
+      token: env("UPSTASH_REDIS_REST_TOKEN") ?? "",
+      skip: () => env("UPSTASH_REDIS_REST_URL") == null,
     }),
   ];
 }

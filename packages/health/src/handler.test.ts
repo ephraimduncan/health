@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createHealthHandler } from "./handler.ts";
+import { createHealthHandler, createLazyHealthHandler } from "./handler.ts";
 import type { Probe } from "./types.ts";
 
 const ok: Probe = { name: "a", run: () => {} };
@@ -66,4 +66,36 @@ test("createHealthHandler() awaits an async extend", async () => {
   const body = await (await handler(new Request("http://localhost/health")))
     .json();
   assert.equal(body.region, "fra");
+});
+
+test("createHealthHandler() answers every path unless path is set", async () => {
+  const anywhere = createHealthHandler({ probes: [ok] });
+  assert.equal((await anywhere(new Request("http://localhost/x"))).status, 200);
+  const scoped = createHealthHandler({ probes: [ok], path: "/health" });
+  assert.equal((await scoped(new Request("http://localhost/x"))).status, 404);
+  assert.equal(
+    (await scoped(new Request("http://localhost/health"))).status,
+    200,
+  );
+  assert.equal(
+    (await scoped(new Request("http://localhost/health/"))).status,
+    200,
+  );
+});
+
+test("createLazyHealthHandler() builds once from the first request's env", async () => {
+  let builds = 0;
+  const handler = createLazyHealthHandler<Request, { name: string }>(
+    (env) => {
+      builds++;
+      return { probes: [{ name: env.name, run: () => {} }] };
+    },
+  );
+  const first = await handler(new Request("http://localhost/"), { name: "a" });
+  const second = await handler(new Request("http://localhost/"), {
+    name: "b",
+  });
+  assert.equal(builds, 1);
+  assert.equal((await first.json()).checks[0].name, "a");
+  assert.equal((await second.json()).checks[0].name, "a");
 });

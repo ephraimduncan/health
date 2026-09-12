@@ -1,18 +1,14 @@
-import { defaultFormatError, ProbeTimeoutError, toError } from "./errors.ts";
+import { ProbeTimeoutError, resolveFormatError, toError } from "./errors.ts";
 import type {
   CheckResult,
-  FormatError,
   HealthReport,
   HealthStatus,
   Probe,
+  ProbeContext,
+  RunProbesOptions,
 } from "./types.ts";
 
 export const defaultTimeoutMs = 5000;
-
-export interface RunProbesOptions {
-  readonly timeoutMs?: number;
-  readonly formatError?: FormatError;
-}
 
 export async function runProbes(
   probes: readonly Probe[],
@@ -44,25 +40,14 @@ async function runProbe(
   probe: Probe,
   options: RunProbesOptions,
 ): Promise<CheckResult> {
-  const name = probe.name;
-  const critical = probe.critical ?? false;
-  const timeoutMs = probe.timeoutMs ?? options.timeoutMs ?? defaultTimeoutMs;
-  const formatError = options.formatError ?? defaultFormatError;
+  const ctx: ProbeContext = {
+    name: probe.name,
+    critical: probe.critical ?? false,
+    timeoutMs: probe.timeoutMs ?? options.timeoutMs ?? defaultTimeoutMs,
+  };
+  const { name, critical, timeoutMs } = ctx;
+  const formatError = resolveFormatError(options.formatError);
   const started = performance.now();
-
-  let skipped: boolean;
-  try {
-    skipped = probe.skip?.() ?? false;
-  } catch (e) {
-    return {
-      name,
-      status: "failed",
-      critical,
-      latencyMs: elapsed(started),
-      error: formatError(toError(e)),
-    };
-  }
-  if (skipped) return { name, status: "skipped", critical, latencyMs: 0 };
 
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -73,12 +58,17 @@ async function runProbe(
     }, timeoutMs);
   });
 
+  const work = Promise.resolve().then(async () => {
+    if (await probe.skip?.()) return "skipped";
+    await probe.run(controller.signal, ctx);
+    return "ok";
+  });
+  work.catch(() => {});
+
   try {
-    await Promise.race([
-      Promise.resolve().then(() => probe.run(controller.signal)),
-      timeout,
-    ]);
-    return { name, status: "ok", critical, latencyMs: elapsed(started) };
+    const status = await Promise.race([work, timeout]);
+    if (status === "skipped") return { name, status, critical, latencyMs: 0 };
+    return { name, status, critical, latencyMs: elapsed(started) };
   } catch (e) {
     const error = toError(e);
     return {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { runProbes } from "@openstatus/health";
-import { fakeFetch, hangFetch } from "./fake-fetch.ts";
+import { fakeFetch, hangFetch } from "@openstatus/health/testing";
 import { tinybirdProbe } from "./mod.ts";
 
 test("tinybirdProbe() hits /v0/health on the default base URL", async () => {
