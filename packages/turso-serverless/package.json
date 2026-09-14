@@ -1,6 +1,6 @@
 {
   "name": "@openstatus/health-turso-serverless",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Turso serverless driver probe for @openstatus/health",
   "keywords": [
     "openstatus",
@@ -47,7 +47,7 @@
     "node": ">=22"
   },
   "peerDependencies": {
-    "@openstatus/health": "^0.1.1",
+    "@openstatus/health": "^0.1.2",
     "@tursodatabase/serverless": ">=1.0.0"
   },
   "peerDependenciesMeta": {

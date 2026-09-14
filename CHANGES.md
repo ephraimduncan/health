@@ -1,14 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - Every hosting package (`fly`, `koyeb`, `railway`, `vercel`, `cloudflare`)
   accepts a typed `omit` list on its `*Server()` / `*Extend()` options, so a
   public endpoint can hide individual fields:
   `vercelExtend({ omit: ["projectId", "commitSha"] })`. The keys are checked
-  against the package's `*ServerInfo` type, and `platform` can be omitted too.
+  against the package's `*ServerInfo` type, and `platform` can be omitted too
+  (#5).
 - `@openstatus/health` exports `omitFields(value, keys?)`, the shallow-copy
   helper the hosting packages use to implement `omit`.
+- Every package README ends with an "About openstatus" section and a link to
+  the MIT license (#4).
+- Every package moves to 0.1.2; adapters and probes now declare
+  `@openstatus/health` as a peer at `^0.1.2`.
 
 ## 0.1.1
 

@@ -1,6 +1,6 @@
 {
   "name": "@openstatus/health-supabase",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Supabase connection-pressure probe for @openstatus/health",
   "keywords": [
     "openstatus",
@@ -46,7 +46,7 @@
     "node": ">=22"
   },
   "peerDependencies": {
-    "@openstatus/health": "^0.1.1",
+    "@openstatus/health": "^0.1.2",
     "@supabase/supabase-js": "^2.0.0"
   },
   "peerDependenciesMeta": {

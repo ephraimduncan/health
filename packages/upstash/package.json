@@ -1,6 +1,6 @@
 {
   "name": "@openstatus/health-upstash",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Upstash Redis probe for @openstatus/health",
   "keywords": [
     "openstatus",
@@ -46,7 +46,7 @@
     "node": ">=22"
   },
   "peerDependencies": {
-    "@openstatus/health": "^0.1.1"
+    "@openstatus/health": "^0.1.2"
   },
   "devDependencies": {
     "tsdown": "^0.12.7",
