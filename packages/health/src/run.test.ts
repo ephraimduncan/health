@@ -114,6 +114,19 @@ test("runProbes() passes real errors to formatError", async () => {
   assert.equal(report.checks[1].error, "E: raw");
 });
 
+test("runProbes() reports critical rejections that cannot become strings", async () => {
+  const report = await runProbes([{
+    name: "a",
+    critical: true,
+    run: () => Promise.reject({ toString: 0, code: "PRIVATE_FAILURE" }),
+  }], { formatError: "message" });
+  assert.equal(report.status, "unhealthy");
+  assert.equal(report.checks[0].status, "failed");
+  assert.equal(report.checks[0].critical, true);
+  assert.equal(typeof report.checks[0].error, "string");
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE_FAILURE/);
+});
+
 test("runProbes() times out and aborts the signal", async () => {
   const report = await runProbes([hanging("a", true)]);
   assert.equal(report.status, "unhealthy");

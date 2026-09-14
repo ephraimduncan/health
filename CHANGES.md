@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Health reports and responder fallbacks remain available when a rejected value
+  cannot convert to a string. The error uses generic text without private fields.
+
 ## 0.1.2
 
 - Every hosting package (`fly`, `koyeb`, `railway`, `vercel`, `cloudflare`)
