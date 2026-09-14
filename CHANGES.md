@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `createHealthHandler()` includes `cache-control: no-store` and JSON
+  content-type headers on `404` and `405` responses.
+
 ## 0.1.2
 
 - Every hosting package (`fly`, `koyeb`, `railway`, `vercel`, `cloudflare`)
