@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Health responses ignore a top-level `toJSON` from `extend` so JSON
+  serialization cannot replace the report fields. Nested dates and custom
+  JSON values keep their normal serialization.
+
 ## 0.1.2
 
 - Every hosting package (`fly`, `koyeb`, `railway`, `vercel`, `cloudflare`)
