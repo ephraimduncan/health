@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `renderHealthResponse()` removes extension `checks` and `latencyMs` fields
+  when `exposeChecks` is `false`. Other extension fields remain unchanged.
+
 ## 0.1.2
 
 - Every hosting package (`fly`, `koyeb`, `railway`, `vercel`, `cloudflare`)
