@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `@openstatus/health`: Probes no longer start work if an async `skip`
+  returns `false` after the timeout. The completed timeout report stays unchanged.
+
 ## 0.1.2
 
 - Every hosting package (`fly`, `koyeb`, `railway`, `vercel`, `cloudflare`)

@@ -175,6 +175,27 @@ test("runProbes() times out a hanging skip()", async () => {
   assert.equal(report.checks[0].status, "timeout");
 });
 
+test("runProbes() does not start work when skip() resolves false after timeout", async () => {
+  const skip = Promise.withResolvers<boolean>();
+  let ran = false;
+  const report = await runProbes([{
+    name: "a",
+    timeoutMs: 10,
+    skip: () => skip.promise,
+    run: () => {
+      ran = true;
+    },
+  }]);
+  assert.equal(report.checks[0].status, "timeout");
+  const completed = structuredClone(report);
+
+  skip.resolve(false);
+  await delay(0);
+
+  assert.equal(ran, false);
+  assert.deepEqual(report, completed);
+});
+
 test("runProbes() passes name, critical and timeoutMs to run()", async () => {
   let seen: { name: string; critical: boolean; timeoutMs: number } | undefined;
   await runProbes([{
