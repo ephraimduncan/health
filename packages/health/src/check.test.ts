@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
+import { runInNewContext } from "node:vm";
 import { createHealthCheck } from "./check.ts";
 import { DuplicateProbeError } from "./errors.ts";
 import type { Probe } from "./types.ts";
@@ -148,6 +149,20 @@ test("createHealthCheck() swallows onReport errors", async () => {
     onReport: () => Promise.reject(new Error("logger down")),
   });
   assert.equal((await rejecting.report()).status, "ok");
+});
+
+test("createHealthCheck() swallows onReport rejections from another realm", async () => {
+  const { probe } = counting("a");
+  const ForeignPromise: PromiseConstructor = runInNewContext("Promise");
+  assert.notEqual(ForeignPromise, Promise);
+  const check = createHealthCheck({
+    probes: [probe],
+    onReport: () => ForeignPromise.reject(new Error("logger down")),
+  });
+  const report = await check.report();
+  assert.equal(report.status, "ok");
+  await delay(0);
+  assert.equal(await check.report(), report);
 });
 
 test("createHealthCheck() accepts the formatError presets", async () => {

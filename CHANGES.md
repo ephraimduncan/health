@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `@openstatus/health`: `onReport` catches rejected promises from other JavaScript
+  realms without an unhandled rejection.
+
 ## 0.1.2
 
 - Every hosting package (`fly`, `koyeb`, `railway`, `vercel`, `cloudflare`)

@@ -59,8 +59,7 @@ export function createHealthCheck(options: HealthCheckOptions): HealthCheck {
 function notify(onReport: OnReport | undefined, report: HealthReport): void {
   if (onReport == null) return;
   try {
-    const result = onReport(report);
-    if (result instanceof Promise) result.catch(() => {});
+    Promise.resolve(onReport(report)).catch(() => {});
   } catch {
     return;
   }
