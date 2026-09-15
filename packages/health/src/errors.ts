@@ -50,8 +50,8 @@ export function resolveFormatError(
 }
 
 export function toError<T>(value: T): Error {
-  if (value instanceof Error) return value;
   try {
+    if (value instanceof Error) return value;
     return new Error(String(value));
   } catch {
     return new Error("failed");
