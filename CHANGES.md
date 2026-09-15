@@ -4,6 +4,8 @@
 
 - `createHealthHandler()` includes `cache-control: no-store` and JSON
   content-type headers on `404` and `405` responses.
+- `@openstatus/health`: Probes no longer start work if an async `skip`
+  returns `false` after the timeout. The completed timeout report stays unchanged.
 
 ## 0.1.2
 
