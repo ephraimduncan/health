@@ -42,6 +42,7 @@ export function renderHealthResponse(
       checks: report.checks,
     }
     : { ...extended, status: report.status, checkedAt: report.checkedAt };
+  Reflect.deleteProperty(body, "toJSON");
   return {
     status: statusCodeFor(report, options),
     headers: healthHeaders,

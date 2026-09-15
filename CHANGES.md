@@ -4,6 +4,15 @@
 
 - `@openstatus/health`: `onReport` catches rejected promises from other JavaScript
   realms without an unhandled rejection.
+- Health reports and responder fallbacks remain available when a rejected value
+  cannot convert to a string. The error uses generic text without private fields.
+- Health responses ignore a top-level `toJSON` from `extend` so JSON
+  serialization cannot replace the report fields. Nested dates and custom
+  JSON values keep their normal serialization.
+- `createHealthHandler()` includes `cache-control: no-store` and JSON
+  content-type headers on `404` and `405` responses.
+- `@openstatus/health`: Probes no longer start work if an async `skip`
+  returns `false` after the timeout. The completed timeout report stays unchanged.
 
 ## 0.1.2
 
