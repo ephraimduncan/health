@@ -4,6 +4,8 @@
 
 - `renderHealthResponse()` removes extension `checks` and `latencyMs` fields
   when `exposeChecks` is `false`. Other extension fields remain unchanged.
+- `@openstatus/health`: `onReport` catches rejected promises from other JavaScript
+  realms without an unhandled rejection.
 - Health reports and responder fallbacks remain available when a rejected value
   cannot convert to a string. The error uses generic text without private fields.
 - Health responses ignore a top-level `toJSON` from `extend` so JSON
