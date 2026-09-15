@@ -4,6 +4,8 @@
 
 - `renderHealthResponse()` removes extension `checks` and `latencyMs` fields
   when `exposeChecks` is `false`. Other extension fields remain unchanged.
+- Health reports and responder fallbacks remain available when a rejected value
+  cannot convert to a string. The error uses generic text without private fields.
 - Health responses ignore a top-level `toJSON` from `extend` so JSON
   serialization cannot replace the report fields. Nested dates and custom
   JSON values keep their normal serialization.
