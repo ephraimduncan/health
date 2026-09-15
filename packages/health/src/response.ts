@@ -45,6 +45,7 @@ export function renderHealthResponse(
     delete body.checks;
     delete body.latencyMs;
   }
+  Reflect.deleteProperty(body, "toJSON");
   return {
     status: statusCodeFor(report, options),
     headers: healthHeaders,

@@ -4,6 +4,13 @@
 
 - `renderHealthResponse()` removes extension `checks` and `latencyMs` fields
   when `exposeChecks` is `false`. Other extension fields remain unchanged.
+- Health responses ignore a top-level `toJSON` from `extend` so JSON
+  serialization cannot replace the report fields. Nested dates and custom
+  JSON values keep their normal serialization.
+- `createHealthHandler()` includes `cache-control: no-store` and JSON
+  content-type headers on `404` and `405` responses.
+- `@openstatus/health`: Probes no longer start work if an async `skip`
+  returns `false` after the timeout. The completed timeout report stays unchanged.
 
 ## 0.1.2
 

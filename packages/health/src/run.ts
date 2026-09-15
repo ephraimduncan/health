@@ -63,6 +63,7 @@ async function runProbe(
 
   const work = Promise.resolve().then(async () => {
     if (await probe.skip?.()) return "skipped";
+    controller.signal.throwIfAborted();
     await probe.run(controller.signal, ctx);
     return "ok";
   });
